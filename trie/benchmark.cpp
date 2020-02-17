@@ -1,191 +1,102 @@
-#include<bits/stdc++.h>
-#include <unistd.h> 
+#include <bits/stdc++.h>
+#include <unistd.h>
 #include <pthread.h>
 #include <time.h>
 #include "kvStore.cpp"
 using namespace std;
+#define BILLION (int)1E9
 
-string random_key(int stringLength){
-	string key = "";
-	string letters = "";
-	for(char i = 'a';i<='z';i++)letters+=i;
-	for(char i = 'A';i<='Z';i++)letters+=i;
-	for(int i=0;i<stringLength;i++)
-		key = key + letters[rand()%52];
+// struct Slice {
+//     int size;
+//     char *data;
+// };
 
-	return key;
+string random_key(int stringLength, string &key) {
+    // string key = "";
+    key = "";
+    string letters = "";
+
+    for (char i = 'a'; i <= 'z'; i++)
+        letters += i;
+    for (char i = 'A'; i <= 'Z'; i++)
+        letters += i;
+
+    for (int i = 0; i < stringLength; i++) {
+        int x = rand() % letters.size();
+        key += letters[x];
+    }
+    cout << key << endl;
+    return key;
 }
 
-string random_value(int stringLength){
-	string value = "";
-	string letters = "";
-	for(int i = 0;i<=255;i++)letters+=char(i);
+string random_value(int stringLength) {
+    string value = "";
+    string letters = "";
 
-	for(int i=0;i<stringLength;i++)
-		value = value + letters[rand()%256];
+    for (int i = 0; i <= 255; i++)
+        letters += char(i);
 
-	return value;
+    for (int i = 0; i < stringLength; i++) {
+        value += letters[rand() % letters.size()];
+    }
+
+    return value;
 }
-long CLOCKS_PER_SECOND = 1000000;
-kvstore kv;
-map<string,string> db;
-int db_size = 0;
-int num = 0;
 
-void *myThreadFun(void *vargp) 
-{ 
-	int transactions=0;
-	clock_t start = clock();
-	int time = 10;
-	clock_t tt = clock();
-	while((float(tt-start)/CLOCKS_PER_SECOND)<=time)
-	{
+int main() {
+    kvstore obj;
+    double ans = 0;
+    string letters = "", letters2 = "";
+    for (char i = 'a'; i <= 'z'; i++)
+        letters += i;
+    for (char i = 'A'; i <= 'Z'; i++)
+        letters += i;
 
-		for(int i=0;i<10000;i++)
-		{
-			transactions+=1;
-			int x = rand()%5;
-			if(x==0)
-			{
-				string k = random_key(10);
-				bool ans = kv.get(k);
-			}
-			else if(x==1)
-			{
-				int k = rand()%64 + 1;
-				int v = rand()%256 + 1;
-				string key = random_key(k);
-				string value = random_value(v);
-				bool ans = kv.put(key,value);
-				db_size++;
-			}
-			else if(x==2)
-			{
-				int temp=db_size;
-				if (temp == 0)
-					continue;		
-				int rem = rand()%temp;
-				pair <string,string> check = kv.get(rem);
-				bool check2 = kv.del(check.first);
-				db_size--;
-			}
-			else if(x==3)
-			{
-				int temp=db_size;
-				if (temp == 0)
-					continue;
-				int rem = rand()%temp;
-				pair <string,string> check = kv.get(rem);
-			}
-			else if(x==4)
-			{
-				int temp=db_size;
-				if (temp == 0)
-					continue;
-				int rem = rand()%temp;
-				bool check = kv.del(rem);
-				db_size--;
-			}
-		}
-		tt=clock();
-	}
-	cout<<transactions/time<<endl;
-	return NULL;  
-} 
+    for (int i = 0; i <= 255; i++)
+        letters2 += char(i);
 
-int main()
-{
-	for(int i=0;i<100000;i++)
-	{
-		int k = rand()%64 + 1;
-		int v = rand()%256 + 1;
-		string key = random_key(k);
-		string value = random_value(v);
-		db.insert(pair<string,string>(key,value));
-		kv.put(key,value);
-		db_size++;
-	}
+    int val1 = rand() % 26;
+    int val2 = rand() % 255;
 
-	bool incorrect = false;
+    for (int i = 0; i < 10000; i++) {
+        int k = rand() % 64 + 1;
+        int v = rand() % 256 + 1;
+        string key = "", value = "2";
 
-	for(int i=0;i<10000;i++)
-	{
-		int x = rand()%5;
-		if(x==0)
-		{
-			string k = random_key(10);
-			bool ans = kv.get(k);
-			map<string,string>:: iterator itr = db.find(k);
-			if((ans==false && itr != db.end()) || (ans==true && itr == db.end()) )
-				incorrect = true;
-		}
-		else if(x==1)
-		{
-			int k = rand()%64 + 1;
-			int v = rand()%256 + 1;
-			string key = random_key(k);
-			string value = random_value(v);
-			db.insert(pair<string,string>(key,value));
-			bool check1 = kv.get(key);
-			bool ans = kv.put(key,value);
-			bool check2 = kv.get(key);
-			db_size++;
-			if(check2 == false || check1 != ans)
-				incorrect = true;
-		}
-		else if(x==2)
-		{
-			int max_size = db.size();
-			int rem = rand()%max_size;
-			map<string,string>:: iterator itr = db.begin();
-			for(int i=0;i<rem;i++)itr++;
-			string key = itr->first;
-			bool check = kv.del(key);
-			db_size--;
-			db.erase(itr);
-			bool check2 = kv.get(key);
-			if(check2 == true)
-				incorrect = true;
-		}
-		else if(x==3)
-		{
-			int max_size = db.size();
-			int rem = rand()%max_size;
-			pair <string,string> check = kv.get(rem);
-			map<string,string>:: iterator itr = db.begin();
-			for(int i=0;i<rem;i++)itr++;
-			if(check.first != itr->first || check.second != itr->second)
-				incorrect = true;
-		}
-		else if(x==4)
-		{
-			int max_size = db.size();
-			int rem = rand()%max_size;
-			map<string,string>:: iterator itr = db.begin();
-			for(int i=0;i<rem;i++)itr++;
-			string key = itr->first;
-			bool check = kv.del(rem);
-			db.erase(itr);
-			db_size--;
-			bool check2 = kv.get(key);
-			if(check2 == true)
-				incorrect = true;
-		}
-	}
-	if(incorrect == true)
-	{
-		cout<<0<<endl;
-		return 0;
-	}
-	int threads = 4;
+        for (int i = 0; i < val1; i++) {
+            int x = rand() % letters.size();
+            key += letters[x];
+        }
+        key += '\0';
+        for (int i = 0; i < val2; i++) {
+            value += letters[rand() % letters.size()];
+        }
 
-	pthread_t tid[threads];
-	for (int i = 0; i < threads; i++) 
-	{
-		tid[i] = i;
-        pthread_create(&tid[i], NULL, myThreadFun, (void *)&tid[i]); 
-	}
-	for(int i=0;i<threads;i++)
-		pthread_join(tid[i],NULL);
-	return 0;
+        value += '\0';
+        // cout << key << "    " << value << endl;
+        Slice kk, vv;
+        kk.size = val1;
+        vv.size = val2;
+        kk.data = (char *)malloc(sizeof(char) * val1 + 8);
+        vv.data = (char *)malloc(sizeof(char) * val2 + 8);
+        for (int j = 0; j < val1; j++) {
+            kk.data[j] = key[j];
+        }
+        for (int j = 0; j < val2; j++) {
+            vv.data[j] = value[j];
+        }
+        // kk.data = &key;
+        // vv.data = &value;
+        struct timespec start, stop;
+        double accum;
+
+        clock_gettime(CLOCK_MONOTONIC, &start);
+        obj.get(kk, vv);
+        clock_gettime(CLOCK_MONOTONIC, &stop);
+        accum = (stop.tv_sec - start.tv_sec) +
+                (stop.tv_nsec - start.tv_nsec) / BILLION;
+        ans += accum;
+    }
+    printf("time : %lf\n\n", ans);
+    return 0;
 }
