@@ -28,11 +28,13 @@ class kvstore {
                 break;
             }
         }
-        if (!cur)
+        if (cur == NULL || cur->val == NULL)
             return false;
-        value.size = strlen(cur->val);
-        value.data = (char *)malloc((value.size + 1) * 8);
-        strcpy(value.data, cur->val);
+        // printf()
+        // value.size = strlen(cur->val);
+        // value.data = (char *)malloc((value.size + 1) * 8);
+        // strcpy(value.data, cur->val);
+        value.data = cur->val;
         return true;
     }
 
