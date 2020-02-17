@@ -1,92 +1,191 @@
-#include <bits/stdc++.h>
+#include<bits/stdc++.h>
+#include <unistd.h> 
+#include <pthread.h>
+#include <time.h>
+#include "kvStore.cpp"
 using namespace std;
-#define BILLION 1E9
 
-struct Slice{
-	uint8_t size;
-	char *data;
-};
-#define C 52
-struct node{
-	int cnt[C] = {0};
-	node *ptr[C] = {NULL};
-	char *val = NULL;
-};
-node *root = (node*) malloc(sizeof(node));
-extern void put(Slice &key, Slice &value){
-	node *cur = root;
-	for(int i = 0; i < key.size; i++){
-		if(key.data[i] <= 'Z'){
-			cur->cnt[key.data[i] - 'A']++;
-			if(!cur->ptr[key.data[i] - 'A']) cur->ptr[key.data[i] - 'A'] = (node*) malloc(sizeof(node));
-			cur = cur->ptr[key.data[i] - 'A'];	
-		}
-		else{
-			cur->cnt[key.data[i] - 'a' + 26]++;
-			if(!cur->ptr[key.data[i] - 'a' + 26]) cur->ptr[key.data[i] - 'a' + 26] = (node*) malloc(sizeof(node));
-			cur = cur->ptr[key.data[i] - 'a' + 26];	
-		}
-	}
-	cur->val = (char*) realloc(cur->val, (value.size + 2) * 8);
-	strcpy(cur->val, value.data);
-}
-extern char* get(Slice &key){
-	node *cur = root;
-	for(int i = 0; i < key.size; i++){
-		if(key.data[i] <= 'Z' && cur->cnt[key.data[i] - 'A']){
-			cur = cur->ptr[key.data[i] - 'A'];	
-		}
-		else if(key.data[i] > 'Z' && cur->cnt[key.data[i] - 'a' + 26]){ 
-			cur = cur->ptr[key.data[i] - 'a' + 26];	
-		}
-		else{
-			cur = NULL;
-			break;
-		}
-	}
-	if(!cur) return NULL;
-	return cur->val;
+string random_key(int stringLength){
+	string key = "";
+	string letters = "";
+	for(char i = 'a';i<='z';i++)letters+=i;
+	for(char i = 'A';i<='Z';i++)letters+=i;
+	for(int i=0;i<stringLength;i++)
+		key = key + letters[rand()%52];
+
+	return key;
 }
 
-int main(void) {
-    int n = 5;
-    double ans = 0;
+string random_value(int stringLength){
+	string value = "";
+	string letters = "";
+	for(int i = 0;i<=255;i++)letters+=char(i);
 
-    for (int i = 0; i < n; i++) {
-        char key[65], value[257];
-        Slice Key, Value;
-        for (int j = 0; j < 64; j++) {
-            int p;
-            int flag = rand() % 2;
-            if (flag == 1) {
-                p = 65 + rand() % 26;
-            } else {
-                p = 97 + rand() % 26;
-            }
-            key[j] = (char)p;
-        }
-        for (int j = 0; j < 256; j++) {
-            int  p = 65 + rand() % 26;
-            value[j] = (char)p;
-        }
-        struct timespec start, stop;
-        double accum;
-        Key.size = 63;
-        Key.data = (char*) malloc(65 * 8); 
-        strcpy(Key.data, key);
-        Value.size = 255;
-        Value.data = (char*) malloc(257 * 8); 
-        strcpy(Value.data, value);
-        clock_gettime(CLOCK_MONOTONIC, &start);
-        cout << Value.data << "\n";
-        put(Key, Value);
-        cout << get(Key) << "\n\n";
-        clock_gettime(CLOCK_MONOTONIC, &stop);
+	for(int i=0;i<stringLength;i++)
+		value = value + letters[rand()%256];
 
-        accum = (stop.tv_sec - start.tv_sec) +
-                (stop.tv_nsec - start.tv_nsec) / BILLION;
-        ans += accum;
-    }
+	return value;
+}
+long CLOCKS_PER_SECOND = 1000000;
+kvstore kv;
+map<string,string> db;
+int db_size = 0;
+int num = 0;
 
-    printf("time : %lf\n\n", ans);
+void *myThreadFun(void *vargp) 
+{ 
+	int transactions=0;
+	clock_t start = clock();
+	int time = 10;
+	clock_t tt = clock();
+	while((float(tt-start)/CLOCKS_PER_SECOND)<=time)
+	{
+
+		for(int i=0;i<10000;i++)
+		{
+			transactions+=1;
+			int x = rand()%5;
+			if(x==0)
+			{
+				string k = random_key(10);
+				bool ans = kv.get(k);
+			}
+			else if(x==1)
+			{
+				int k = rand()%64 + 1;
+				int v = rand()%256 + 1;
+				string key = random_key(k);
+				string value = random_value(v);
+				bool ans = kv.put(key,value);
+				db_size++;
+			}
+			else if(x==2)
+			{
+				int temp=db_size;
+				if (temp == 0)
+					continue;		
+				int rem = rand()%temp;
+				pair <string,string> check = kv.get(rem);
+				bool check2 = kv.del(check.first);
+				db_size--;
+			}
+			else if(x==3)
+			{
+				int temp=db_size;
+				if (temp == 0)
+					continue;
+				int rem = rand()%temp;
+				pair <string,string> check = kv.get(rem);
+			}
+			else if(x==4)
+			{
+				int temp=db_size;
+				if (temp == 0)
+					continue;
+				int rem = rand()%temp;
+				bool check = kv.del(rem);
+				db_size--;
+			}
+		}
+		tt=clock();
+	}
+	cout<<transactions/time<<endl;
+	return NULL;  
+} 
+
+int main()
+{
+	for(int i=0;i<100000;i++)
+	{
+		int k = rand()%64 + 1;
+		int v = rand()%256 + 1;
+		string key = random_key(k);
+		string value = random_value(v);
+		db.insert(pair<string,string>(key,value));
+		kv.put(key,value);
+		db_size++;
+	}
+
+	bool incorrect = false;
+
+	for(int i=0;i<10000;i++)
+	{
+		int x = rand()%5;
+		if(x==0)
+		{
+			string k = random_key(10);
+			bool ans = kv.get(k);
+			map<string,string>:: iterator itr = db.find(k);
+			if((ans==false && itr != db.end()) || (ans==true && itr == db.end()) )
+				incorrect = true;
+		}
+		else if(x==1)
+		{
+			int k = rand()%64 + 1;
+			int v = rand()%256 + 1;
+			string key = random_key(k);
+			string value = random_value(v);
+			db.insert(pair<string,string>(key,value));
+			bool check1 = kv.get(key);
+			bool ans = kv.put(key,value);
+			bool check2 = kv.get(key);
+			db_size++;
+			if(check2 == false || check1 != ans)
+				incorrect = true;
+		}
+		else if(x==2)
+		{
+			int max_size = db.size();
+			int rem = rand()%max_size;
+			map<string,string>:: iterator itr = db.begin();
+			for(int i=0;i<rem;i++)itr++;
+			string key = itr->first;
+			bool check = kv.del(key);
+			db_size--;
+			db.erase(itr);
+			bool check2 = kv.get(key);
+			if(check2 == true)
+				incorrect = true;
+		}
+		else if(x==3)
+		{
+			int max_size = db.size();
+			int rem = rand()%max_size;
+			pair <string,string> check = kv.get(rem);
+			map<string,string>:: iterator itr = db.begin();
+			for(int i=0;i<rem;i++)itr++;
+			if(check.first != itr->first || check.second != itr->second)
+				incorrect = true;
+		}
+		else if(x==4)
+		{
+			int max_size = db.size();
+			int rem = rand()%max_size;
+			map<string,string>:: iterator itr = db.begin();
+			for(int i=0;i<rem;i++)itr++;
+			string key = itr->first;
+			bool check = kv.del(rem);
+			db.erase(itr);
+			db_size--;
+			bool check2 = kv.get(key);
+			if(check2 == true)
+				incorrect = true;
+		}
+	}
+	if(incorrect == true)
+	{
+		cout<<0<<endl;
+		return 0;
+	}
+	int threads = 4;
+
+	pthread_t tid[threads];
+	for (int i = 0; i < threads; i++) 
+	{
+		tid[i] = i;
+        pthread_create(&tid[i], NULL, myThreadFun, (void *)&tid[i]); 
+	}
+	for(int i=0;i<threads;i++)
+		pthread_join(tid[i],NULL);
+	return 0;
 }
