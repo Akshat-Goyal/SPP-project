@@ -4,7 +4,7 @@
 #include <time.h>
 #include "kvStore.cpp"
 using namespace std;
-#define BILLION (int)1E9
+#define BILLION 1e9
 
 // struct Slice {
 //     int size;
@@ -45,7 +45,7 @@ string random_value(int stringLength) {
 
 int main() {
     kvstore obj;
-    double ans = 0;
+    double anss = 0;
     string letters = "", letters2 = "";
     for (char i = 'a'; i <= 'z'; i++)
         letters += i;
@@ -58,7 +58,7 @@ int main() {
     int val1 = rand() % 26;
     int val2 = rand() % 255;
 
-    for (int i = 0; i < 10000; i++) {
+    for (int i = 0; i < 1e6; i++) {
         int k = rand() % 64 + 1;
         int v = rand() % 256 + 1;
         string key = "", value = "2";
@@ -91,12 +91,12 @@ int main() {
         double accum;
 
         clock_gettime(CLOCK_MONOTONIC, &start);
-        obj.get(kk, vv);
+        obj.put(kk, vv);
         clock_gettime(CLOCK_MONOTONIC, &stop);
         accum = (stop.tv_sec - start.tv_sec) +
                 (stop.tv_nsec - start.tv_nsec) / BILLION;
-        ans += accum;
+        anss += accum;
     }
-    printf("time : %lf\n\n", ans);
+    printf("time : %lf\n\n", anss);
     return 0;
 }
