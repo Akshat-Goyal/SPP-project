@@ -40,19 +40,14 @@ public:
 		}
 		if (!cur || !cur->val)
 			return false;
-		value.size = strlen(cur->val);
-		value.data = (char *)malloc((value.size + 1) * 8);
-		strcpy(value.data, cur->val);
+		value.data = cur->val;
 		return true;
 	}
 
 	int put(node *cur, Slice &key, Slice &value, int i)
 	{
 		if (!cur)
-		{
-			cout << "44444444\n";
 			return -1;
-		}
 		if (i == key.size)
 		{
 			int ret = 0;
@@ -60,25 +55,17 @@ public:
 				ret = 1;
 			cur->val = (char *)realloc(cur->val, (value.size + 1) * 8);
 			if (!cur->val)
-			{
-				cout << "111111\n";
 				return -1;
-			}
-			// cout << key.size << "\n";
 			strcpy(cur->val, value.data);
 			return ret;
 		}
-		cout << key.data[i] << "\n";
 		if (key.data[i] <= 'Z')
 		{
 			if (!cur->ptr[key.data[i] - 'A'])
 			{
 				cur->ptr[key.data[i] - 'A'] = (node *)malloc(sizeof(node));
 				if (!cur->ptr[key.data[i] - 'A'])
-				{
-					cout << "222222\n";
 					return -1;
-				}
 			}
 			int ret = put(cur->ptr[key.data[i] - 'A'], key, value, i + 1);
 			if (ret == 1)
@@ -96,10 +83,7 @@ public:
 			{
 				cur->ptr[key.data[i] - 'a' + 26] = (node *)malloc(sizeof(node));
 				if (!cur->ptr[key.data[i] - 'a' + 26])
-				{
-					cout << "333333\n";
 					return -1;
-				}
 			}
 			int ret = put(cur->ptr[key.data[i] - 'a' + 26], key, value, i + 1);
 			if (ret == 1)
@@ -115,8 +99,6 @@ public:
 
 	bool put(Slice &key, Slice &value)
 	{
-		// cout << key.data << " " << key.size << "\n";
-		// cout << value.data << " " << value.size << "\n";
 		if (put(root, key, value, 0) == -1)
 			return false;
 		return true;
@@ -161,10 +143,13 @@ public:
 		char temp[65];
 		int j = 0;
 		node *cur = root;
-		while (N != 1)
+		while (!(N == 1 && cur->val))
 		{
 			if (!cur)
+			{
+				cout << "111111\n";
 				return false;
+			}
 			int sum = 0;
 			for (int i = 0; i < 52; i++)
 			{
@@ -178,17 +163,27 @@ public:
 				}
 			}
 			if (sum < N)
+			{
+				cout << "22222222\n";
 				return false;
+			}
 		}
-		if (!cur || !cur->val)
+		if (!cur)
+		{
+			cout << "3333333\n";
 			return false;
+		}
+		if (!cur->val)
+		{
+			cout << "4444444444\n";
+			return false;
+		}
 		temp[j] = '\0';
 		key.size = strlen(temp);
 		key.data = (char *)malloc((key.size + 1) * 8);
 		strcpy(key.data, temp);
 		value.size = strlen(cur->val);
-		value.data = (char *)malloc((value.size + 1) * 8);
-		strcpy(value.data, cur->val);
+		value.data = cur->val;
 		return true;
 	}
 
@@ -196,7 +191,7 @@ public:
 	{
 		if (!cur)
 			return false;
-		if (N == 1)
+		if (!(N == 1 && cur->val))
 		{
 			if (!cur->val)
 				return false;

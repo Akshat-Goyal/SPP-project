@@ -86,14 +86,12 @@ int num = 0;
 //     return NULL;
 // }
 
-Slice ms(string s)
+string cs(char *s)
 {
-    Slice k;
-    k.size = s.length();
-    k.data = (char *)malloc((k.size + 1) * 8);
-    for (int i = 0; i < k.size; i++)
-        k.data[i] = s[i];
-    k.data[k.size] = '\0';
+    string k;
+    int n = strlen(s);
+    for (int i = 0; i < n; i++)
+        k += s[i];
     return k;
 }
 
@@ -107,12 +105,14 @@ Slice ms(char *s)
     return k;
 }
 
+map<string, char *> mp;
+
 int main()
 {
-    for (int i = 0; i < 10; i++)
+    for (int i = 0; i < 1000; i++)
     {
-        int k = rand() % 5 + 1;
-        int v = rand() % 6 + 1;
+        int k = rand() % 64 + 1;
+        int v = rand() % 256 + 1;
         // cout << k << " " << v << "\n";
         char *key = random_key(k);
         char *value = random_value(v);
@@ -120,39 +120,50 @@ int main()
         // cout << value << "\n";
         // cout << key << " " << strlen(key) << "\n";
         // cout << value << " " << strlen(value) << "\n";
+        int fl = 1;
+        for (auto it : db)
+        {
+            if (strcmp(it.first, key) == 0)
+            {
+                fl = 0;
+                break;
+            }
+        }
+        if (!fl)
+            continue;
         db.insert(make_pair(key, value));
+        mp.insert(make_pair(cs(key), key));
         Slice kk = ms(key);
         Slice vv = ms(value);
-        if (kv.put(kk, vv))
+        if (!kv.put(kk, vv))
         {
             cout << "Error in Put\n";
-        }
-        else
-        {
-            cout << "Put successfully\n";
+            return 0;
         }
         db_size++;
     }
 
-    // bool incorrect = false;
-
-    // for (auto it : db)
-    // {
-    //     Slice key = ms(it.first);
-    //     Slice value;
-    //     if (!kv.get(key, value))
-    //     {
-    //         cout << "Error in Get\n";
-    //         return 0;
-    //     }
-    //     if (value.size != it.second.length() || strcmp(value.data, ms(it.second).data))
-    //     {
-    //         incorrect = true;
-    //         cout << "Value in Wrong in Get\n";
-    //         return 0;
-    //     }
-    // }
-    // cout << "Correct\n";
+    int incorrect = 0;
+    cout << db_size << "\n";
+    int cnt = 1;
+    for (auto it : mp)
+    {
+        Slice key, value;
+        if (!kv.get(cnt, key, value))
+        {
+            cout << "error in getN\n";
+            // cout << cnt << "\n";
+            // return 0;
+        }
+        if (strcmp(it.second, key.data) || strcmp(db[it.second], value.data))
+        {
+            cout << "Wrong \n";
+            // return 0;
+        }
+        cnt++;
+    }
+    // cout << cnt << "\n";
+    cout << "Correct\n";
     // for (int i = 0; i < 10; i++) {
     //     // int x = rand() % 5;
     //     // if (x == 0) {
