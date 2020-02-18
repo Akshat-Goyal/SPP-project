@@ -15,7 +15,7 @@ private:
 	{
 		int cnt[52] = {0};
 		node *ptr[52] = {NULL};
-		char *val = NULL;
+		Z char *val = NULL;
 	};
 	node *root = (node *)malloc(sizeof(node));
 
