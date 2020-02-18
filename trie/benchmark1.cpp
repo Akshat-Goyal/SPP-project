@@ -5,33 +5,36 @@
 #include "kvStore.cpp"
 using namespace std;
 
-string random_key(int stringLength) {
-    string key = "";
+char *random_key(int stringLength)
+{
+    char *key = (char *)malloc(sizeof(char) * (stringLength + 1));
     string letters = "";
     for (char i = 'a'; i <= 'z'; i++)
         letters += i;
     for (char i = 'A'; i <= 'Z'; i++)
         letters += i;
     for (int i = 0; i < stringLength; i++)
-        key = key + letters[rand() % 52];
-    key += '\0';
+        key[i] = letters[rand() % 52];
+    key[stringLength] = '\0';
     return key;
 }
 
-string random_value(int stringLength) {
-    string value = "";
+char *random_value(int stringLength)
+{
+    char *value = (char *)malloc(sizeof(char) * (stringLength + 1));
     string letters = "";
-    for (int i = 0; i <= 255; i++)
-        letters += char(i);
-
+    for (char i = 'a'; i <= 'z'; i++)
+        letters += i;
+    for (char i = 'A'; i <= 'Z'; i++)
+        letters += i;
     for (int i = 0; i < stringLength; i++)
-        value = value + letters[rand() % 256];
-    value += '\0';
+        value[i] = letters[rand() % 52];
+    value[stringLength] = '\0';
     return value;
 }
 long CLOCKS_PER_SECOND = 1000000;
 kvstore kv;
-map<string, string> db;
+map<char *, char *> db;
 int db_size = 0;
 int num = 0;
 
@@ -83,57 +86,73 @@ int num = 0;
 //     return NULL;
 // }
 
-int main() {
-    for (int i = 0; i < 10000; i++) {
-        int k = rand() % 64 + 1;
-        int v = rand() % 256 + 1;
-        string key = random_key(k);
-        string value = random_value(v);
-        struct Slice kk, vv;
-        kk.size = k;
-        vv.size = v;
-        kk.data = (char *)malloc(sizeof(char) * k + 8);
-        vv.data = (char *)malloc(sizeof(char) * v + 8);
-        for (int j = 0; j < k; j++) {
-            kk.data[j] = key[j];
+Slice ms(string s)
+{
+    Slice k;
+    k.size = s.length();
+    k.data = (char *)malloc((k.size + 1) * 8);
+    for (int i = 0; i < k.size; i++)
+        k.data[i] = s[i];
+    k.data[k.size] = '\0';
+    return k;
+}
+
+Slice ms(char *s)
+{
+    Slice k;
+    k.size = strlen(s);
+    k.data = s;
+    // k.data = (char *)malloc((k.size + 1) * 8);
+    // strcpy(k.data, s);
+    return k;
+}
+
+int main()
+{
+    for (int i = 0; i < 10; i++)
+    {
+        int k = rand() % 5 + 1;
+        int v = rand() % 6 + 1;
+        // cout << k << " " << v << "\n";
+        char *key = random_key(k);
+        char *value = random_value(v);
+        // cout << key << "\n";
+        // cout << value << "\n";
+        // cout << key << " " << strlen(key) << "\n";
+        // cout << value << " " << strlen(value) << "\n";
+        db.insert(make_pair(key, value));
+        Slice kk = ms(key);
+        Slice vv = ms(value);
+        if (kv.put(kk, vv))
+        {
+            cout << "Error in Put\n";
         }
-        kk.data[kk.size] = '\0';
-        for (int j = 0; j < v; j++) {
-            vv.data[j] = value[j];
+        else
+        {
+            cout << "Put successfully\n";
         }
-        vv.data[vv.size] = '\0';
-        db.insert(pair<string, string>(key, value));
-        kv.put(kk, vv);
         db_size++;
     }
 
-    bool incorrect = false;
+    // bool incorrect = false;
 
-    for (auto it : db) {
-        Slice key;
-        key.size = it.first.length();
-        key.data = (char *)malloc(key.size * 8 + 8);
-        for (int j = 0; j < key.size; j++)
-            key.data[j] = it.first[j];
-        key.data[key.size] = '\0';
-        Slice value;
-        if (!kv.get(key, value)) {
-            cout << "false\n";
-            return 0;
-        }
-        if (value.size != it.second.length()) {
-            incorrect = true;
-            cout << "Wrong\n";
-            return 0;
-        }
-        for (int j = 0; j < value.size; j++) {
-            if (value.data[j] != it.second[j]) {
-                cout << "Wrong\n";
-                return 0;
-            }
-        }
-    }
-    cout << "Correct\n";
+    // for (auto it : db)
+    // {
+    //     Slice key = ms(it.first);
+    //     Slice value;
+    //     if (!kv.get(key, value))
+    //     {
+    //         cout << "Error in Get\n";
+    //         return 0;
+    //     }
+    //     if (value.size != it.second.length() || strcmp(value.data, ms(it.second).data))
+    //     {
+    //         incorrect = true;
+    //         cout << "Value in Wrong in Get\n";
+    //         return 0;
+    //     }
+    // }
+    // cout << "Correct\n";
     // for (int i = 0; i < 10; i++) {
     //     // int x = rand() % 5;
     //     // if (x == 0) {

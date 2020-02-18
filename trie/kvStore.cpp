@@ -49,7 +49,10 @@ public:
 	int put(node *cur, Slice &key, Slice &value, int i)
 	{
 		if (!cur)
+		{
+			cout << "44444444\n";
 			return -1;
+		}
 		if (i == key.size)
 		{
 			int ret = 0;
@@ -57,17 +60,25 @@ public:
 				ret = 1;
 			cur->val = (char *)realloc(cur->val, (value.size + 1) * 8);
 			if (!cur->val)
+			{
+				cout << "111111\n";
 				return -1;
+			}
+			// cout << key.size << "\n";
 			strcpy(cur->val, value.data);
 			return ret;
 		}
+		cout << key.data[i] << "\n";
 		if (key.data[i] <= 'Z')
 		{
 			if (!cur->ptr[key.data[i] - 'A'])
 			{
 				cur->ptr[key.data[i] - 'A'] = (node *)malloc(sizeof(node));
 				if (!cur->ptr[key.data[i] - 'A'])
+				{
+					cout << "222222\n";
 					return -1;
+				}
 			}
 			int ret = put(cur->ptr[key.data[i] - 'A'], key, value, i + 1);
 			if (ret == 1)
@@ -85,7 +96,10 @@ public:
 			{
 				cur->ptr[key.data[i] - 'a' + 26] = (node *)malloc(sizeof(node));
 				if (!cur->ptr[key.data[i] - 'a' + 26])
+				{
+					cout << "333333\n";
 					return -1;
+				}
 			}
 			int ret = put(cur->ptr[key.data[i] - 'a' + 26], key, value, i + 1);
 			if (ret == 1)
@@ -101,6 +115,8 @@ public:
 
 	bool put(Slice &key, Slice &value)
 	{
+		// cout << key.data << " " << key.size << "\n";
+		// cout << value.data << " " << value.size << "\n";
 		if (put(root, key, value, 0) == -1)
 			return false;
 		return true;
@@ -211,35 +227,18 @@ public:
 	}
 };
 
-Slice ms(String s)
-{
-	Slice k;
-	k.size = s.length();
-	k.data = (char *)malloc((k.size + 1) * 8);
-	for (int i = 0; i < k.size; i++)
-		k.data[i] = s[i];
-	k.data[k.size] = '\0';
-	return k;
-}
-
-Slice ms(char *s)
-{
-	Slice k;
-	k.size = strlen(s);
-	k.data = (char *)malloc((k.size + 1) * 8);
-	strcpy(k.data, s);
-	return k;
-}
-
-int main()
-{
-	kvstore obj;
-	Slice key, value;
-	key.size = strlen("HelloWorld");
-	key.data = (char *)malloc((value.size + 1) * 8);
-	strcpy(key.data, "HelloWorld");
-	value.size = strlen("WhatTheHell");
-	value.data = (char *)malloc((value.size + 1) * 8);
-	strcpy(value.data, "WhatTheHell");
-	cout << obj.put(key, value) << "\n";
-}
+// int main()
+// {
+// 	kvstore obj;
+// 	Slice key, value;
+// 	key.size = strlen("HelloWorld");
+// 	key.data = (char *)malloc((value.size + 1) * 8);
+// 	strcpy(key.data, "HelloWorld");
+// 	value.size = strlen("WhatTheHell");
+// 	value.data = (char *)malloc((value.size + 1) * 8);
+// 	strcpy(value.data, "WhatTheHell");
+// 	cout << obj.put(key, value) << "\n";
+// 	cout << obj.put(key, value) << "\n";
+// 	cout << obj.put(key, value) << "\n";
+// 	cout << obj.put(key, value) << "\n";
+// }
