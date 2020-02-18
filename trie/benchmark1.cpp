@@ -111,7 +111,7 @@ int main()
 {
     for (int i = 0; i < 1000; i++)
     {
-        int k = rand() % 64 + 1;
+        int k = rand() % 10 + 1;
         int v = rand() % 256 + 1;
         // cout << k << " " << v << "\n";
         char *key = random_key(k);
@@ -120,6 +120,7 @@ int main()
         // cout << value << "\n";
         // cout << key << " " << strlen(key) << "\n";
         // cout << value << " " << strlen(value) << "\n";
+        // cout << key << "\n";
         int fl = 1;
         for (auto it : db)
         {
@@ -142,26 +143,34 @@ int main()
         }
         db_size++;
     }
-
     int incorrect = 0;
     cout << db_size << "\n";
     int cnt = 1;
-    for (auto it : mp)
-    {
-        Slice key, value;
-        if (!kv.get(cnt, key, value))
-        {
-            cout << "error in getN\n";
-            // cout << cnt << "\n";
-            // return 0;
-        }
-        if (strcmp(it.second, key.data) || strcmp(db[it.second], value.data))
-        {
-            cout << "Wrong \n";
-            // return 0;
-        }
-        cnt++;
-    }
+    Slice key, value;
+    cout << kv.del(db_size) << "\n";
+    cout << kv.get(db_size, key, value) << "\n";
+
+    // for (auto it : mp)
+    // {
+    //     Slice key, value;
+    //     if (!kv.get(cnt, key, value))
+    //     {
+    //         cout << "error in getN\n";
+    //         // cout << cnt << "\n";
+    //         // return 0;
+    //     }
+    //     if (strcmp(it.second, key.data) || strcmp(db[it.second], value.data))
+    //     {
+    //         cout << "Wrong \n";
+    //         cout << it.second << "\n";
+    //         cout << key.data << "\n";
+    //         cout << db[it.second] << "\n";
+    //         cout << value.data << "\n";
+    //         cout << cnt << "\n";
+    //         // return 0;
+    //     }
+    //     cnt++;
+    // }
     // cout << cnt << "\n";
     cout << "Correct\n";
     // for (int i = 0; i < 10; i++) {

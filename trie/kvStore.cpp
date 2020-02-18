@@ -138,102 +138,88 @@ public:
 		return del(root, key, 0);
 	}
 
-	bool get(int N, Slice &key, Slice &value)
-	{
-		char temp[65];
-		int j = 0;
-		node *cur = root;
-		while (!(N == 1 && cur->val))
-		{
-			if (!cur)
-			{
-				cout << "111111\n";
-				return false;
-			}
-			int sum = 0;
-			for (int i = 0; i < 52; i++)
-			{
-				sum += cur->cnt[i];
-				if (sum >= N)
-				{
-					N -= sum - cur->cnt[i];
-					temp[j++] = i < 26 ? 'A' + i : 'a' + i - 26;
-					cur = cur->ptr[i];
-					break;
-				}
-			}
-			if (sum < N)
-			{
-				cout << "22222222\n";
-				return false;
-			}
-		}
-		if (!cur)
-		{
-			cout << "3333333\n";
-			return false;
-		}
-		if (!cur->val)
-		{
-			cout << "4444444444\n";
-			return false;
-		}
-		temp[j] = '\0';
-		key.size = strlen(temp);
-		key.data = (char *)malloc((key.size + 1) * 8);
-		strcpy(key.data, temp);
-		value.size = strlen(cur->val);
-		value.data = cur->val;
-		return true;
-	}
-
-	bool del(int N, node *cur)
+	bool get(node *cur, char *s, int &len, int &N, Slice &value)
 	{
 		if (!cur)
-			return false;
-		if (!(N == 1 && cur->val))
+			return 0;
+		if (cur->val)
 		{
-			if (!cur->val)
-				return false;
-			free(cur->val);
-			cur->val = NULL;
-			return true;
-		}
-		int sum = 0;
-		for (int i = 0; i < 52; i++)
-		{
-			sum += cur->cnt[i];
-			if (sum >= N)
+			N--;
+			if (!N)
 			{
-				N -= sum - cur->cnt[i];
-				if (!del(N, cur->ptr[i]))
-					return false;
-				cur->cnt[i]--;
+				if (!cur->val)
+					return 0;
+				value.size = strlen(cur->val);
+				value.data = cur->val;
 				return true;
 			}
 		}
-		if (sum < N)
-			return false;
+		for (int i = 0; i < 52; i++)
+		{
+			if (!cur->ptr[i])
+				continue;
+			*s++ = i < 26 ? 'A' + i : 'a' + i - 26;
+			len++;
+			if (get(cur->ptr[i], s, len, N, value))
+			{
+				return true;
+			}
+			else
+			{
+				s--;
+				len--;
+			}
+		}
+		return false;
+	}
+
+	bool get(int N, Slice &key, Slice &value)
+	{
+		char *s = (char *)malloc(65 * 8);
+		int len = 0;
+		if (!get(root, s, len, N, value))
+			return 0;
+		key.size = len;
+		key.data = (char *)malloc((len + 1) * 8);
+		for (int i = 0; i < len; i++)
+			key.data[i] = s[i];
+		key.data[len] = '\0';
+		free(s);
+		return true;
+	}
+
+	bool del(node *cur, int &N)
+	{
+		if (!cur)
+			return 0;
+		if (cur->val)
+		{
+			N--;
+			if (!N)
+			{
+				if (!cur->val)
+					return 0;
+				free(cur->val);
+				cur->val = NULL;
+				return true;
+			}
+		}
+		for (int i = 0; i < 52; i++)
+		{
+			if (!cur->ptr[i])
+				continue;
+			if (del(cur->ptr[i], N))
+			{
+				return true;
+			}
+		}
+		return false;
 	}
 
 	bool del(int N)
 	{
-		return del(N, root);
+		if (!del(root, N))
+			return false;
+		return true;
 	}
 };
-
-// int main()
-// {
-// 	kvstore obj;
-// 	Slice key, value;
-// 	key.size = strlen("HelloWorld");
-// 	key.data = (char *)malloc((value.size + 1) * 8);
-// 	strcpy(key.data, "HelloWorld");
-// 	value.size = strlen("WhatTheHell");
-// 	value.data = (char *)malloc((value.size + 1) * 8);
-// 	strcpy(value.data, "WhatTheHell");
-// 	cout << obj.put(key, value) << "\n";
-// 	cout << obj.put(key, value) << "\n";
-// 	cout << obj.put(key, value) << "\n";
-// 	cout << obj.put(key, value) << "\n";
-// }
