@@ -1,225 +1,553 @@
 #include <bits/stdc++.h>
+#include <stdint.h>
 using namespace std;
+
+enum COLOR
+{
+	RED,
+	BLACK
+};
 
 struct Slice
 {
-	int size;
+	uint8_t size;
 	char *data;
 };
 
-class kvstore
+class Node
 {
-
-private:
-	struct node
-	{
-		int cnt[52] = {0};
-		node *ptr[52] = {NULL};
-		Z char *val = NULL;
-	};
-	node *root = (node *)malloc(sizeof(node));
-
 public:
-	bool get(Slice &key, Slice &value)
+	Slice key, value;
+	COLOR color;
+	Node *left, *right, *parent;
+
+	Node(Slice &key, Slice &value) : key(key), value(value)
 	{
-		node *cur = root;
-		for (int i = 0; i < key.size; i++)
-		{
-			if (!cur)
-				return false;
-			if (key.data[i] <= 'Z' && cur->cnt[key.data[i] - 'A'])
-			{
-				cur = cur->ptr[key.data[i] - 'A'];
-			}
-			else if (key.data[i] > 'Z' && cur->cnt[key.data[i] - 'a' + 26])
-			{
-				cur = cur->ptr[key.data[i] - 'a' + 26];
-			}
-			else
-				return false;
-		}
-		if (!cur || !cur->val)
-			return false;
-		value.data = cur->val;
-		return true;
+		parent = left = right = NULL;
+		color = RED;
 	}
 
-	int put(node *cur, Slice &key, Slice &value, int i)
+	inline bool isOnLeft() { return this == parent->left; }
+
+	Node *uncle()
 	{
-		if (!cur)
-			return -1;
-		if (i == key.size)
-		{
-			int ret = 0;
-			if (!cur->val)
-				ret = 1;
-			cur->val = (char *)realloc(cur->val, (value.size + 1) * 8);
-			if (!cur->val)
-				return -1;
-			strcpy(cur->val, value.data);
-			return ret;
-		}
-		if (key.data[i] <= 'Z')
-		{
-			if (!cur->ptr[key.data[i] - 'A'])
-			{
-				cur->ptr[key.data[i] - 'A'] = (node *)malloc(sizeof(node));
-				if (!cur->ptr[key.data[i] - 'A'])
-					return -1;
-			}
-			int ret = put(cur->ptr[key.data[i] - 'A'], key, value, i + 1);
-			if (ret == 1)
-				cur->cnt[key.data[i] - 'A']++;
-			if (!cur->cnt[key.data[i] - 'A'] && cur->ptr[key.data[i] - 'A'])
-			{
-				free(cur->ptr[key.data[i] - 'A']);
-				cur->ptr[key.data[i] - 'A'] = NULL;
-			}
-			return ret;
-		}
+		if (parent == NULL || parent->parent == NULL)
+			return NULL;
+		if (parent->isOnLeft())
+			return parent->parent->right;
 		else
+			return parent->parent->left;
+	}
+
+	Node *sibling()
+	{
+		if (parent == NULL)
+			return NULL;
+		if (isOnLeft())
+			return parent->right;
+		return parent->left;
+	}
+
+	void moveDown(Node *nParent)
+	{
+		if (parent != NULL)
 		{
-			if (!cur->ptr[key.data[i] - 'a' + 26])
+			if (isOnLeft())
 			{
-				cur->ptr[key.data[i] - 'a' + 26] = (node *)malloc(sizeof(node));
-				if (!cur->ptr[key.data[i] - 'a' + 26])
-					return -1;
+				parent->left = nParent;
 			}
-			int ret = put(cur->ptr[key.data[i] - 'a' + 26], key, value, i + 1);
-			if (ret == 1)
-				cur->cnt[key.data[i] - 'a' + 26]++;
-			if (!cur->cnt[key.data[i] - 'a' + 26] && cur->ptr[key.data[i] - 'a' + 26])
+			else
 			{
-				free(cur->ptr[key.data[i] - 'a' + 26]);
-				cur->ptr[key.data[i] - 'a' + 26] = NULL;
+				parent->right = nParent;
 			}
-			return ret;
+		}
+		nParent->parent = parent;
+		parent = nParent;
+	}
+
+	inline bool hasRedChild()
+	{
+		return (left != NULL && left->color == RED) || (right != NULL && right->color == RED);
+	}
+};
+
+class kvStore
+{
+	Node *root;
+
+public:
+	kvStore() { root = NULL; }
+
+	Node *getRoot() { return root; }
+
+	Node *search(Slice &key)
+	{
+		Node *temp = root;
+		while (temp != NULL)
+		{
+			int ret = strncmp(key.data, temp->key.data, min(key.size, temp->key.size));
+			if (ret < 0 || (!ret && key.size < temp->key.size))
+			{
+				if (temp->left == NULL)
+					break;
+				else
+					temp = temp->left;
+			}
+			else if (!ret && key.size == temp->key.size)
+			{
+				break;
+			}
+			else
+			{
+				if (temp->right == NULL)
+					break;
+				else
+					temp = temp->right;
+			}
+		}
+		return temp;
+	}
+
+	void leftRotate(Node *x)
+	{
+		Node *nParent = x->right;
+		if (x == root)
+			root = nParent;
+
+		x->moveDown(nParent);
+		x->right = nParent->left;
+		if (nParent->left != NULL)
+			nParent->left->parent = x;
+		nParent->left = x;
+	}
+
+	void rightRotate(Node *x)
+	{
+		Node *nParent = x->left;
+		if (x == root)
+			root = nParent;
+		x->moveDown(nParent);
+		x->left = nParent->right;
+		if (nParent->right != NULL)
+			nParent->right->parent = x;
+		nParent->right = x;
+	}
+
+	inline void swapColors(Node *x1, Node *x2)
+	{
+		COLOR temp;
+		temp = x1->color;
+		x1->color = x2->color;
+		x2->color = temp;
+	}
+
+	void fixRedRed(Node *x)
+	{
+		if (x == root)
+		{
+			x->color = BLACK;
+			return;
+		}
+		Node *parent = x->parent, *grandparent = parent->parent,
+			 *uncle = x->uncle();
+		if (parent->color != BLACK)
+		{
+			if (uncle != NULL && uncle->color == RED)
+			{
+				parent->color = BLACK;
+				uncle->color = BLACK;
+				grandparent->color = RED;
+				fixRedRed(grandparent);
+			}
+			else
+			{
+				if (parent->isOnLeft())
+				{
+					if (x->isOnLeft())
+					{
+						swapColors(parent, grandparent);
+					}
+					else
+					{
+						leftRotate(parent);
+						swapColors(x, grandparent);
+					}
+					rightRotate(grandparent);
+				}
+				else
+				{
+					if (x->isOnLeft())
+					{
+						rightRotate(parent);
+						swapColors(x, grandparent);
+					}
+					else
+					{
+						swapColors(parent, grandparent);
+					}
+					leftRotate(grandparent);
+				}
+			}
 		}
 	}
 
 	bool put(Slice &key, Slice &value)
 	{
-		if (put(root, key, value, 0) == -1)
-			return false;
-		return true;
-	}
-
-	bool del(node *cur, Slice &key, int i)
-	{
-		if (!cur)
-			return false;
-		if (i == key.size)
+		if (root == NULL)
 		{
-			if (!cur->val)
-				return false;
-			free(cur->val);
-			cur->val = NULL;
-			return true;
-		}
-		if (key.data[i] <= 'Z' && cur->cnt[key.data[i] - 'A'])
-		{
-			if (!del(cur->ptr[key.data[i] - 'A'], key, i + 1))
-				return false;
-			cur->cnt[key.data[i] - 'A']--;
-		}
-		else if (key.data[i] > 'Z' && cur->cnt[key.data[i] - 'a' + 26])
-		{
-			if (!del(cur->ptr[key.data[i] - 'a' + 26], key, i + 1))
-				return false;
-			cur->cnt[key.data[i] - 'a' + 26]--;
+			Node *newNode = new Node(key, value);
+			newNode->color = BLACK;
+			root = newNode;
 		}
 		else
-			return false;
-		return true;
-	}
-
-	bool del(Slice &key)
-	{
-		return del(root, key, 0);
-	}
-
-	bool get(node *cur, char *s, int &len, int &N, Slice &value)
-	{
-		if (!cur)
-			return 0;
-		if (cur->val)
 		{
-			N--;
-			if (!N)
+			Node *temp = search(key);
+			int ret = strncmp(key.data, temp->key.data, min(key.size, temp->key.size));
+			if (!ret && key.size == temp->key.size)
 			{
-				if (!cur->val)
-					return 0;
-				value.size = strlen(cur->val);
-				value.data = cur->val;
+				free(temp->value.data);
+				temp->value.size = value.size;
+				temp->value.data = value.data;
 				return true;
 			}
-		}
-		for (int i = 0; i < 52; i++)
-		{
-			if (!cur->ptr[i])
-				continue;
-			*s++ = i < 26 ? 'A' + i : 'a' + i - 26;
-			len++;
-			if (get(cur->ptr[i], s, len, N, value))
-			{
-				return true;
-			}
+			Node *newNode = new Node(key, value);
+			newNode->parent = temp;
+			if (ret < 0 || (!ret && key.size < temp->key.size))
+				temp->left = newNode;
 			else
-			{
-				s--;
-				len--;
-			}
+				temp->right = newNode;
+			fixRedRed(newNode);
 		}
-		return false;
-	}
-
-	bool get(int N, Slice &key, Slice &value)
-	{
-		char *s = (char *)malloc(65 * 8);
-		int len = 0;
-		if (!get(root, s, len, N, value))
-			return 0;
-		key.size = len;
-		key.data = (char *)malloc((len + 1) * 8);
-		for (int i = 0; i < len; i++)
-			key.data[i] = s[i];
-		key.data[len] = '\0';
-		free(s);
 		return true;
 	}
 
-	bool del(node *cur, int &N)
+	bool get(Slice &key, Slice &value)
 	{
-		if (!cur)
-			return 0;
-		if (cur->val)
-		{
-			N--;
-			if (!N)
-			{
-				if (!cur->val)
-					return 0;
-				free(cur->val);
-				cur->val = NULL;
-				return true;
-			}
-		}
-		for (int i = 0; i < 52; i++)
-		{
-			if (!cur->ptr[i])
-				continue;
-			if (del(cur->ptr[i], N))
-			{
-				return true;
-			}
-		}
-		return false;
-	}
-
-	bool del(int N)
-	{
-		if (!del(root, N))
+		if (root == NULL)
 			return false;
-		return true;
+		Node *temp = search(key);
+		int ret = strncmp(key.data, temp->key.data, min(key.size, temp->key.size));
+		if (!ret && key.size == temp->key.size)
+		{
+			value.size = temp->value.size;
+			value.data = temp->value.data;
+			return true;
+		}
+		return false;
 	}
+
+	// void swapValues(Node *u, Node *v)
+	// {
+	// 	int temp;
+	// 	temp = u->key;
+	// 	u->key = v->key;
+	// 	v->key = temp;
+	// }
+
+	// Node *successor(Node *x)
+	// {
+	// 	Node *temp = x;
+
+	// 	while (temp->left != NULL)
+	// 		temp = temp->left;
+
+	// 	return temp;
+	// }
+
+	// Node *BSTreplace(Node *x)
+	// {
+	// 	if (x->left != NULL and x->right != NULL)
+	// 		return successor(x->right);
+	// 	if (x->left == NULL and x->right == NULL)
+	// 		return NULL;
+	// 	if (x->left != NULL)
+	// 		return x->left;
+	// 	else
+	// 		return x->right;
+	// }
+
+	// void deleteNode(Node *v)
+	// {
+	// 	Node *u = BSTreplace(v);
+	// 	bool uvBlack = ((u == NULL or u->color == BLACK) and (v->color == BLACK));
+	// 	Node *parent = v->parent;
+	// 	if (u == NULL)
+	// 	{
+	// 		if (v == root)
+	// 		{
+	// 			root = NULL;
+	// 		}
+	// 		else
+	// 		{
+	// 			if (uvBlack)
+	// 			{
+	// 				fixDoubleBlack(v);
+	// 			}
+	// 			else
+	// 			{
+	// 				if (v->sibling() != NULL)
+	// 					v->sibling()->color = RED;
+	// 			}
+	// 			if (v->isOnLeft())
+	// 			{
+	// 				parent->left = NULL;
+	// 			}
+	// 			else
+	// 			{
+	// 				parent->right = NULL;
+	// 			}
+	// 		}
+	// 		delete v;
+	// 		return;
+	// 	}
+
+	// 	if (v->left == NULL or v->right == NULL)
+	// 	{
+	// 		if (v == root)
+	// 		{
+	// 			v->key = u->key;
+	// 			v->left = v->right = NULL;
+	// 			delete u;
+	// 		}
+	// 		else
+	// 		{
+	// 			if (v->isOnLeft())
+	// 			{
+	// 				parent->left = u;
+	// 			}
+	// 			else
+	// 			{
+	// 				parent->right = u;
+	// 			}
+	// 			delete v;
+	// 			u->parent = parent;
+	// 			if (uvBlack)
+	// 			{
+	// 				fixDoubleBlack(u);
+	// 			}
+	// 			else
+	// 			{
+	// 				u->color = BLACK;
+	// 			}
+	// 		}
+	// 		return;
+	// 	}
+	// 	swapValues(u, v);
+	// 	deleteNode(u);
+	// }
+
+	// void fixDoubleBlack(Node *x)
+	// {
+	// 	if (x == root)
+	// 		return;
+	// 	Node *sibling = x->sibling(), *parent = x->parent;
+	// 	if (sibling == NULL)
+	// 	{
+	// 		fixDoubleBlack(parent);
+	// 	}
+	// 	else
+	// 	{
+	// 		if (sibling->color == RED)
+	// 		{
+	// 			parent->color = RED;
+	// 			sibling->color = BLACK;
+	// 			if (sibling->isOnLeft())
+	// 			{
+	// 				rightRotate(parent);
+	// 			}
+	// 			else
+	// 			{
+	// 				leftRotate(parent);
+	// 			}
+	// 			fixDoubleBlack(x);
+	// 		}
+	// 		else
+	// 		{
+	// 			if (sibling->hasRedChild())
+	// 			{
+	// 				if (sibling->left != NULL and sibling->left->color == RED)
+	// 				{
+	// 					if (sibling->isOnLeft())
+	// 					{
+	// 						sibling->left->color = sibling->color;
+	// 						sibling->color = parent->color;
+	// 						rightRotate(parent);
+	// 					}
+	// 					else
+	// 					{
+	// 						sibling->left->color = parent->color;
+	// 						rightRotate(sibling);
+	// 						leftRotate(parent);
+	// 					}
+	// 				}
+	// 				else
+	// 				{
+	// 					if (sibling->isOnLeft())
+	// 					{
+	// 						sibling->right->color = parent->color;
+	// 						leftRotate(sibling);
+	// 						rightRotate(parent);
+	// 					}
+	// 					else
+	// 					{
+	// 						sibling->right->color = sibling->color;
+	// 						sibling->color = parent->color;
+	// 						leftRotate(parent);
+	// 					}
+	// 				}
+	// 				parent->color = BLACK;
+	// 			}
+	// 			else
+	// 			{
+	// 				sibling->color = RED;
+	// 				if (parent->color == BLACK)
+	// 					fixDoubleBlack(parent);
+	// 				else
+	// 					parent->color = BLACK;
+	// 			}
+	// 		}
+	// 	}
+	// }
+
+	// void levelOrder(Node *x)
+	// {
+	// 	if (x == NULL)
+	// 		return;
+	// 	queue<Node *> q;
+	// 	Node *curr;
+	// 	q.push(x);
+	// 	while (!q.empty())
+	// 	{
+	// 		curr = q.front();
+	// 		q.pop();
+	// 		cout << curr->key << " ";
+	// 		if (curr->left != NULL)
+	// 			q.push(curr->left);
+	// 		if (curr->right != NULL)
+	// 			q.push(curr->right);
+	// 	}
+	// }
+
+	// void inorder(Node *x)
+	// {
+	// 	if (x == NULL)
+	// 		return;
+	// 	inorder(x->left);
+	// 	cout << x->key << " ";
+	// 	inorder(x->right);
+	// }
+
+	// void deleteByVal(int n)
+	// {
+	// 	if (root == NULL)
+	// 		return;
+
+	// 	Node *v = search(n), *u;
+
+	// 	if (v->key != n)
+	// 	{
+	// 		cout << "No node found to delete with value:" << n << endl;
+	// 		return;
+	// 	}
+
+	// 	deleteNode(v);
+	// }
+
+	// void printInOrder()
+	// {
+	// 	cout << "Inorder: " << endl;
+	// 	if (root == NULL)
+	// 		cout << "Tree is empty" << endl;
+	// 	else
+	// 		inorder(root);
+	// 	cout << endl;
+	// }
+
+	// void printLevelOrder()
+	// {
+	// 	cout << "Level order: " << endl;
+	// 	if (root == NULL)
+	// 		cout << "Tree is empty" << endl;
+	// 	else
+	// 		levelOrder(root);
+	// 	cout << endl;
+	// }
 };
+
+// string sliceToStr(Slice &a)
+// {
+// 	string ret = "";
+
+// 	for (int i = 0; i < a.size; i++)
+// 		ret += a.data[i];
+
+// 	return ret;
+// }
+
+// void strToSlice(string l, Slice &a)
+// {
+// 	a.size = l.length();
+// 	a.data = (char *)malloc(a.size);
+// 	strncpy(a.data, l.c_str(), a.size);
+// }
+
+// int main()
+// {
+// 	ios_base::sync_with_stdio(0);
+// 	cin.tie(0);
+// 	cout.tie(0);
+// 	kvStore t;
+// 	Slice key, value;
+// 	key.size = 5;
+// 	key.data = (char *)malloc(sizeof(char) * key.size);
+// 	strncpy(key.data, "hello", key.size);
+// 	value.size = 10;
+// 	value.data = (char *)malloc(sizeof(char) * value.size);
+// 	strncpy(value.data, "helloWorld", value.size);
+// 	t.put(key, value);
+// 	Slice val;
+// 	int ret = t.get(key, val);
+// 	cout << "Key\n";
+// 	cout << sliceToStr(key) << "\n";
+// 	if (!ret)
+// 	{
+// 		cout << "Key does not exist\n";
+// 	}
+// 	else
+// 	{
+// 		if (val.size != value.size || strncmp(val.data, value.data, val.size))
+// 		{
+// 			cout << "Wrong value\n";
+// 		}
+// 		else
+// 		{
+// 			cout << sliceToStr(val) << "\n";
+// 		}
+// 	}
+// 	// key.size = 4;
+// 	// key.data = (char *)malloc(sizeof(char) * key.size);
+// 	// strncpy(key.data, "hell", key.size);
+// 	// value.size = 8;
+// 	// value.data = (char *)malloc(sizeof(char) * value.size);
+// 	// strncpy(value.data, "helloWod", value.size);
+// 	// t.put(key, value);
+// 	// ret = t.get(key, val);
+// 	// cout << "Key\n";
+// 	// cout << sliceToStr(key) << "\n";
+// 	// if (!ret)
+// 	// {
+// 	// 	cout << "Key does not exist\n";
+// 	// }
+// 	// else
+// 	// {
+// 	// 	if (val.size != value.size || strncmp(val.data, value.data, val.size))
+// 	// 	{
+// 	// 		cout << "Wrong value\n";
+// 	// 	}
+// 	// 	else
+// 	// 	{
+// 	// 		cout << sliceToStr(val) << "\n";
+// 	// 	}
+// 	// }
+// 	return 0;
+// }

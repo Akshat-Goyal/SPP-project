@@ -4,99 +4,244 @@
 #include <time.h>
 #include "kvStore.cpp"
 using namespace std;
-#define BILLION 1e9
 
-// struct Slice {
-//     int size;
-//     char *data;
-// };
+string sliceToStr(Slice &a)
+{
+	string ret = "";
 
-string random_key(int stringLength, string &key) {
-    // string key = "";
-    key = "";
-    string letters = "";
+	for (int i = 0; i < a.size; i++)
+		ret += a.data[i];
 
-    for (char i = 'a'; i <= 'z'; i++)
-        letters += i;
-    for (char i = 'A'; i <= 'Z'; i++)
-        letters += i;
-
-    for (int i = 0; i < stringLength; i++) {
-        int x = rand() % letters.size();
-        key += letters[x];
-    }
-    cout << key << endl;
-    return key;
+	return ret;
 }
 
-string random_value(int stringLength) {
-    string value = "";
-    string letters = "";
-
-    for (int i = 0; i <= 255; i++)
-        letters += char(i);
-
-    for (int i = 0; i < stringLength; i++) {
-        value += letters[rand() % letters.size()];
-    }
-
-    return value;
+void strToSlice(string l, Slice &a)
+{
+	a.size = l.length();
+	a.data = (char *)malloc(a.size);
+	strncpy(a.data, l.c_str(), a.size);
 }
 
-int main() {
-    kvstore obj;
-    double anss = 0;
-    string letters = "", letters2 = "";
-    for (char i = 'a'; i <= 'z'; i++)
-        letters += i;
-    for (char i = 'A'; i <= 'Z'; i++)
-        letters += i;
+string random_key(int stringLength)
+{
+	string k = "";
+	string letters = "";
+	for (char i = 'a'; i <= 'z'; i++)
+		letters += i;
+	for (char i = 'A'; i <= 'Z'; i++)
+		letters += i;
+	for (int i = 0; i < stringLength; i++)
+		k = k + letters[rand() % 52];
 
-    for (int i = 0; i <= 255; i++)
-        letters2 += char(i);
+	return k;
+}
 
-    int val1 = rand() % 26;
-    int val2 = rand() % 255;
+string random_value(int stringLength)
+{
+	string v = "";
+	string letters = "";
+	for (int i = 32; i <= 127; i++)
+		letters += char(i);
 
-    for (int i = 0; i < 1e6; i++) {
-        int k = rand() % 64 + 1;
-        int v = rand() % 256 + 1;
-        string key = "", value = "2";
+	for (int i = 0; i < stringLength; i++)
+		v = v + letters[rand() % 96];
 
-        for (int i = 0; i < val1; i++) {
-            int x = rand() % letters.size();
-            key += letters[x];
-        }
-        key += '\0';
-        for (int i = 0; i < val2; i++) {
-            value += letters[rand() % letters.size()];
-        }
+	return v;
+}
 
-        value += '\0';
-        // cout << key << "    " << value << endl;
-        Slice kk, vv;
-        kk.size = val1;
-        vv.size = val2;
-        kk.data = (char *)malloc(sizeof(char) * val1 + 8);
-        vv.data = (char *)malloc(sizeof(char) * val2 + 8);
-        for (int j = 0; j < val1; j++) {
-            kk.data[j] = key[j];
-        }
-        for (int j = 0; j < val2; j++) {
-            vv.data[j] = value[j];
-        }
-        // kk.data = &key;
-        // vv.data = &value;
-        struct timespec start, stop;
-        double accum;
+long CLOCKS_PER_SECOND = 1000000;
+kvStore kv;
+// kvStore kv(10000000);
+map<string, string> db;
+long long db_size = 0;
 
-        clock_gettime(CLOCK_MONOTONIC, &start);
-        obj.put(kk, vv);
-        clock_gettime(CLOCK_MONOTONIC, &stop);
-        accum = (stop.tv_sec - start.tv_sec) +
-                (stop.tv_nsec - start.tv_nsec) / BILLION;
-        anss += accum;
-    }
-    printf("time : %lf\n\n", anss);
-    return 0;
+// void *myThreadFun(void *vargp)
+// {
+// 	int transactions = 0;
+// 	clock_t start = clock();
+// 	int time = 10;
+// 	clock_t tt = clock();
+// 	while ((float(tt - start) / CLOCKS_PER_SECOND) <= time)
+// 	{
+
+// 		for (int i = 0; i < 10000; i++)
+// 		{
+// 			transactions += 1;
+// 			int x = rand() % 5;
+// 			if (x == 0)
+// 			{
+// 				string key = random_key(rand() % 64 + 1);
+// 				Slice s_key, s_value;
+// 				strToSlice(key, s_key);
+// 				bool ans = kv.get(s_key, s_value);
+// 			}
+// 			else if (x == 1)
+// 			{
+// 				string key = random_key(rand() % 64 + 1);
+// 				string value = random_value(rand() % 255 + 1);
+// 				Slice s_key, s_value, temp;
+// 				strToSlice(key, s_key);
+// 				strToSlice(value, s_value);
+
+// 				bool check = kv.get(s_key, temp);
+// 				bool ans = kv.put(s_key, s_value);
+
+// 				if (check == false)
+// 					db_size++;
+// 			}
+// 			else if (x == 2)
+// 			{
+// 				int temp = db_size;
+// 				if (temp == 0)
+// 					continue;
+// 				int rem = rand() % temp;
+// 				Slice s_key, s_value;
+// 				bool check = kv.get(rem, s_key, s_value);
+// 				check = kv.del(s_key);
+// 				db_size--;
+// 			}
+// 			else if (x == 3)
+// 			{
+// 				int temp = db_size;
+// 				if (temp == 0)
+// 					continue;
+// 				int rem = rand() % temp;
+// 				Slice s_key, s_value;
+// 				bool check = kv.get(rem, s_key, s_value);
+// 			}
+// 			else if (x == 4)
+// 			{
+// 				int temp = db_size;
+// 				if (temp == 0)
+// 					continue;
+// 				int rem = rand() % temp;
+// 				bool check = kv.del(rem);
+// 				db_size--;
+// 			}
+// 		}
+// 		tt = clock();
+// 	}
+// 	cout << transactions / time << endl;
+// 	return NULL;
+// }
+
+int main()
+{
+	struct timespec start, end;
+	double TT = 0;
+	for (int i = 0; i < 10000000; i++)
+	{
+		string key = random_key(rand() % 64 + 1);
+		string value = random_value(rand() % 255 + 1);
+		db[key] = value;
+		Slice k, v;
+		strToSlice(key, k);
+		strToSlice(value, v);
+		clock_gettime(CLOCK_MONOTONIC, &start);
+		kv.put(k, v);
+		clock_gettime(CLOCK_MONOTONIC, &end);
+		TT += (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) * 1e-9;
+		db_size = db.size();
+	}
+
+	cout << "Time taken by put: " << TT << "\n";
+
+	// bool incorrect = false;
+
+	// for (int i = 0; i < 10000; i++)
+	// {
+	// int x = 0;
+	// // x = rand() % 5;
+	// if (x == 0)
+	// {
+	// 	string key = random_key(rand() % 64 + 1);
+	// 	Slice s_key, s_value;
+	// 	strToSlice(key, s_key);
+	// 	bool ans = kv.get(s_key, s_value);
+	// 	map<string, string>::iterator itr = db.find(key);
+	// 	if ((ans == false && itr != db.end()) || (ans == true && itr->second != sliceToStr(s_value)))
+	// 		incorrect = true;
+	// }
+	// else if (x == 1)
+	// {
+	// 	int k = rand() % 64 + 1;
+	// 	int v = rand() % 255 + 1;
+	// 	string key = random_key(k);
+	// 	string value = random_value(v);
+	// 	db[key] = value;
+	// 	Slice s_key, s_value;
+	// 	strToSlice(key, s_key);
+	// 	strToSlice(value, s_value);
+	// 	bool ans = kv.put(s_key, s_value);
+
+	// 	Slice check;
+	// 	bool check2 = kv.get(s_key, check);
+	// 	db_size = db.size();
+	// 	if (check2 == false || value != sliceToStr(check))
+	// 		incorrect = true;
+	// }
+	// else if (x == 2)
+	// {
+	// 	int rem = rand() % db_size;
+	// 	map<string, string>::iterator itr = db.begin();
+	// 	advance(itr, rem);
+	// 	string key = itr->first;
+	// 	Slice s_key, s_value;
+	// 	strToSlice(key, s_key);
+	// 	bool check = kv.del(s_key);
+	// 	db.erase(itr);
+	// 	db_size--;
+
+	// 	bool check2 = kv.get(s_key, s_value);
+	// 	if (check2 == true)
+	// 		incorrect = true;
+	// }
+	// else if (x == 3)
+	// {
+	// 	int rem = rand() % db_size;
+	// 	Slice s_key, s_value;
+	// 	bool check = kv.get(rem, s_key, s_value);
+	// 	map<string, string>::iterator itr = db.begin();
+	// 	for (int i = 0; i < rem; i++)
+	// 		itr++;
+	// 	if (itr->first != sliceToStr(s_key) || itr->second != sliceToStr(s_value))
+	// 		incorrect = true;
+	// }
+	// else if (x == 4)
+	// {
+	// 	int rem = rand() % db_size;
+	// 	map<string, string>::iterator itr = db.begin();
+	// 	for (int i = 0; i < rem; i++)
+	// 		itr++;
+	// 	string key = itr->first;
+	// 	bool check = kv.del(rem);
+	// 	db.erase(itr);
+	// 	db_size--;
+	// 	Slice s_key, s_value;
+	// 	strToSlice(key, s_key);
+	// 	bool check2 = kv.get(s_key, s_value);
+	// 	if (check2 == true)
+	// 		incorrect = true;
+	// }
+	// }
+	if (incorrect == true)
+	{
+		cout << 0 << endl;
+		return 0;
+	}
+	else
+	{
+		cout << 1 << endl;
+	}
+	// int threads = 4;
+
+	// pthread_t tid[threads];
+	// for (int i = 0; i < threads; i++)
+	// {
+	// 	tid[i] = i;
+	//     pthread_create(&tid[i], NULL, myThreadFun, (void *)&tid[i]);
+	// }
+	// for(int i=0;i<threads;i++)
+	// 	pthread_join(tid[i],NULL);
+	return 0;
 }
