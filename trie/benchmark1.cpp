@@ -2,7 +2,7 @@
 #include <unistd.h>
 #include <pthread.h>
 #include <time.h>
-#include "kvStore.cpp"
+#include "trie.cpp"
 using namespace std;
 
 char *random_key(int stringLength)

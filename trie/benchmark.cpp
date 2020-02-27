@@ -224,15 +224,15 @@ int main()
 	// 		incorrect = true;
 	// }
 	// }
-	if (incorrect == true)
-	{
-		cout << 0 << endl;
-		return 0;
-	}
-	else
-	{
-		cout << 1 << endl;
-	}
+	// if (incorrect == true)
+	// {
+	// 	cout << 0 << endl;
+	// 	return 0;
+	// }
+	// else
+	// {
+	// 	cout << 1 << endl;
+	// }
 	// int threads = 4;
 
 	// pthread_t tid[threads];
