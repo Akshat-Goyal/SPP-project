@@ -25,7 +25,7 @@ public:
 	Node(Slice &key, Slice &value) : key(key), value(value)
 	{
 		parent = left = right = NULL;
-		child = 0;
+		child = 1;
 		color = RED;
 	}
 
@@ -82,49 +82,79 @@ public:
 
 	Node *getRoot() { return root; }
 
-	Node *search(Node *temp, Slice &key, int &flag)
+	// Node *search(Node *temp, Slice &key)
+	// {
+	// 	if (!temp)
+	// 		return temp;
+	// 	int ret = strncmp(key.data, temp->key.data, min(key.size, temp->key.size));
+	// 	if (ret < 0 || (!ret && key.size < temp->key.size))
+	// 	{
+	// 		if (temp->left == NULL)
+	// 		{
+	// 			return temp;
+	// 		}
+	// 		else
+	// 		{
+	// 			return search(temp->left, key);
+	// 		}
+	// 	}
+	// 	else if (!ret && key.size == temp->key.size)
+	// 	{
+	// 		return temp;
+	// 	}
+	// 	else
+	// 	{
+	// 		if (temp->right == NULL)
+	// 		{
+	// 			return temp;
+	// 		}
+	// 		else
+	// 		{
+	// 			return search(temp->right, key);
+	// 		}
+	// 	}
+	// }
+
+	Node *search(Slice &key)
 	{
-		if (!temp)
-			return temp;
-		int ret = strncmp(key.data, temp->key.data, min(key.size, temp->key.size));
-		if (ret < 0 || (!ret && key.size < temp->key.size))
+		Node *temp = root;
+		while (temp != NULL)
 		{
-			if (temp->left == NULL)
+			int ret = strncmp(key.data, temp->key.data, min(key.size, temp->key.size));
+			if (ret < 0 || (!ret && key.size < temp->key.size))
 			{
-				temp->child += flag;
-				return temp;
+				if (temp->left == NULL)
+					break;
+				else
+					temp = temp->left;
+			}
+			else if (!ret && key.size == temp->key.size)
+			{
+				break;
 			}
 			else
 			{
-				Node *ret = search(temp->left, key, flag);
-				temp->child += flag;
-				return ret;
+				if (temp->right == NULL)
+					break;
+				else
+					temp = temp->right;
 			}
 		}
-		else if (!ret && key.size == temp->key.size)
-		{
-			flag = 0;
-			return temp;
-		}
-		else
-		{
-			if (temp->right == NULL)
-			{
-				return temp;
-			}
-			else
-			{
-				Node *ret = search(temp->right, key, flag);
-				return ret;
-			}
-		}
+		return temp;
 	}
 
 	inline int getChild(Node *x)
 	{
 		if (x == NULL)
 			return 0;
-		return x->child + 1;
+		return x->child;
+	}
+
+	inline void setChild(Node *x)
+	{
+		if (x == NULL)
+			return;
+		x->child = getChild(x->left) + getChild(x->right) + 1;
 	}
 
 	void leftRotate(Node *x)
@@ -134,10 +164,11 @@ public:
 			root = nParent;
 		x->moveDown(nParent);
 		x->right = nParent->left;
-		nParent->child += getChild(x);
 		if (nParent->left != NULL)
 			nParent->left->parent = x;
 		nParent->left = x;
+		setChild(x);
+		setChild(x->parent);
 	}
 
 	void rightRotate(Node *x)
@@ -147,10 +178,11 @@ public:
 			root = nParent;
 		x->moveDown(nParent);
 		x->left = nParent->right;
-		x->child = getChild(x->left);
 		if (nParent->right != NULL)
 			nParent->right->parent = x;
 		nParent->right = x;
+		setChild(x);
+		setChild(x->parent);
 	}
 
 	inline void swapColors(Node *x1, Node *x2)
@@ -211,6 +243,14 @@ public:
 		}
 	}
 
+	void updateChild(Node *x)
+	{
+		if (x == NULL)
+			return;
+		setChild(x);
+		updateChild(x->parent);
+	}
+
 	bool put(Slice &key, Slice &value)
 	{
 		if (root == NULL)
@@ -221,8 +261,7 @@ public:
 		}
 		else
 		{
-			int flag = 1;
-			Node *temp = search(root, key, flag);
+			Node *temp = search(key);
 			int ret = strncmp(key.data, temp->key.data, min(key.size, temp->key.size));
 			if (!ret && key.size == temp->key.size)
 			{
@@ -237,6 +276,7 @@ public:
 				temp->left = newNode;
 			else
 				temp->right = newNode;
+			updateChild(newNode);
 			fixRedRed(newNode);
 		}
 		return true;
@@ -246,8 +286,7 @@ public:
 	{
 		if (root == NULL)
 			return false;
-		int flag = 0;
-		Node *temp = search(root, key, flag);
+		Node *temp = search(key);
 		int ret = strncmp(key.data, temp->key.data, min(key.size, temp->key.size));
 		if (!ret && key.size == temp->key.size)
 		{
@@ -393,8 +432,7 @@ public:
 					parent->right = NULL;
 				}
 			}
-			int flag = -1;
-			search(root, v->key, flag);
+			updateChild(parent);
 			free(v->key.data);
 			free(v->value.data);
 			delete v;
@@ -421,12 +459,11 @@ public:
 				{
 					parent->right = u;
 				}
-				int flag = -1;
-				search(root, v->key, flag);
+				u->parent = parent;
+				updateChild(u);
 				free(v->key.data);
 				free(v->value.data);
 				delete v;
-				u->parent = parent;
 				if (uvBlack)
 				{
 					fixDoubleBlack(u);
@@ -446,8 +483,7 @@ public:
 	{
 		if (root == NULL)
 			return false;
-		int flag = 0;
-		Node *temp = search(root, key, flag);
+		Node *temp = search(key);
 		int ret = strncmp(key.data, temp->key.data, min(key.size, temp->key.size));
 		if (!ret && key.size == temp->key.size)
 		{
@@ -459,18 +495,20 @@ public:
 
 	Node *search(Node *temp, int N)
 	{
-		if (!temp)
+		if (temp == NULL)
 			return temp;
-		if (N == temp->child + 1)
-			return temp;
-		if (N < temp->child)
+		if (N > temp->child || N < 0)
+			return NULL;
+		if (N <= getChild(temp->left))
 			return search(temp->left, N);
-		return search(temp->right, N - temp->child - 1);
+		else if (N == getChild(temp->left) + 1)
+			return temp;
+		return search(temp->right, N - getChild(temp->left) - 1);
 	}
 
 	bool get(int N, Slice &key, Slice &value)
 	{
-		Node *temp = search(root, N);
+		Node *temp = search(root, N + 1);
 		if (temp == NULL)
 			return false;
 		key = temp->key;
@@ -480,60 +518,72 @@ public:
 
 	bool del(int N)
 	{
-		Node *temp = search(root, N);
+		Node *temp = search(root, N + 1);
 		if (temp == NULL)
 			return false;
 		deleteNode(temp);
 		return true;
 	}
 
-	// void levelOrder(Node *x)
-	// {
-	// 	if (x == NULL)
-	// 		return;
-	// 	queue<Node *> q;
-	// 	Node *curr;
-	// 	q.push(x);
-	// 	while (!q.empty())
-	// 	{
-	// 		curr = q.front();
-	// 		q.pop();
-	// 		cout << curr->key << " ";
-	// 		if (curr->left != NULL)
-	// 			q.push(curr->left);
-	// 		if (curr->right != NULL)
-	// 			q.push(curr->right);
-	// 	}
-	// }
+	string sliceToStr(Slice &a)
+	{
+		string ret = "";
+		for (int i = 0; i < a.size; i++)
+			ret += a.data[i];
+		return ret;
+	}
 
-	// void inorder(Node *x)
-	// {
-	// 	if (x == NULL)
-	// 		return;
-	// 	inorder(x->left);
-	// 	cout << x->key << " ";
-	// 	inorder(x->right);
-	// }
+	void levelOrder(Node *x)
+	{
+		if (x == NULL)
+			return;
+		queue<Node *> q;
+		Node *curr;
+		q.push(x);
+		while (!q.empty())
+		{
+			curr = q.front();
+			q.pop();
+			cout << sliceToStr(curr->key) << "\n"
+				 << sliceToStr(curr->value) << "\n"
+				 << curr->child << "\n";
+			if (curr->left != NULL)
+				q.push(curr->left);
+			if (curr->right != NULL)
+				q.push(curr->right);
+		}
+	}
 
-	// void printInOrder()
-	// {
-	// 	cout << "Inorder: " << endl;
-	// 	if (root == NULL)
-	// 		cout << "Tree is empty" << endl;
-	// 	else
-	// 		inorder(root);
-	// 	cout << endl;
-	// }
+	void inorder(Node *x)
+	{
+		if (x == NULL)
+			return;
+		inorder(x->left);
+		cout << sliceToStr(x->key) << "\n"
+			 << sliceToStr(x->value) << "\n"
+			 << x->child << "\n";
+		inorder(x->right);
+	}
 
-	// void printLevelOrder()
-	// {
-	// 	cout << "Level order: " << endl;
-	// 	if (root == NULL)
-	// 		cout << "Tree is empty" << endl;
-	// 	else
-	// 		levelOrder(root);
-	// 	cout << endl;
-	// }
+	void printInOrder()
+	{
+		cout << "Inorder: " << endl;
+		if (root == NULL)
+			cout << "Tree is empty" << endl;
+		else
+			inorder(root);
+		cout << endl;
+	}
+
+	void printLevelOrder()
+	{
+		cout << "Level order: " << endl;
+		if (root == NULL)
+			cout << "Tree is empty" << endl;
+		else
+			levelOrder(root);
+		cout << endl;
+	}
 };
 
 // string sliceToStr(Slice &a)
