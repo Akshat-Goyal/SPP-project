@@ -8,10 +8,8 @@ using namespace std;
 string sliceToStr(Slice &a)
 {
 	string ret = "";
-
 	for (int i = 0; i < a.size; i++)
 		ret += a.data[i];
-
 	return ret;
 }
 
@@ -55,75 +53,75 @@ kvStore kv;
 map<string, string> db;
 long long db_size = 0;
 
-// void *myThreadFun(void *vargp)
-// {
-// 	int transactions = 0;
-// 	clock_t start = clock();
-// 	int time = 10;
-// 	clock_t tt = clock();
-// 	while ((float(tt - start) / CLOCKS_PER_SECOND) <= time)
-// 	{
+void *myThreadFun(void *vargp)
+{
+	int transactions = 0;
+	clock_t start = clock();
+	int time = 10;
+	clock_t tt = clock();
+	while ((float(tt - start) / CLOCKS_PER_SECOND) <= time)
+	{
 
-// 		for (int i = 0; i < 10000; i++)
-// 		{
-// 			transactions += 1;
-// 			int x = rand() % 5;
-// 			if (x == 0)
-// 			{
-// 				string key = random_key(rand() % 64 + 1);
-// 				Slice s_key, s_value;
-// 				strToSlice(key, s_key);
-// 				bool ans = kv.get(s_key, s_value);
-// 			}
-// 			else if (x == 1)
-// 			{
-// 				string key = random_key(rand() % 64 + 1);
-// 				string value = random_value(rand() % 255 + 1);
-// 				Slice s_key, s_value, temp;
-// 				strToSlice(key, s_key);
-// 				strToSlice(value, s_value);
+		for (int i = 0; i < 10000; i++)
+		{
+			transactions += 1;
+			int x = rand() % 5;
+			if (x == 0)
+			{
+				string key = random_key(rand() % 64 + 1);
+				Slice s_key, s_value;
+				strToSlice(key, s_key);
+				bool ans = kv.get(s_key, s_value);
+			}
+			else if (x == 1)
+			{
+				string key = random_key(rand() % 64 + 1);
+				string value = random_value(rand() % 255 + 1);
+				Slice s_key, s_value, temp;
+				strToSlice(key, s_key);
+				strToSlice(value, s_value);
 
-// 				bool check = kv.get(s_key, temp);
-// 				bool ans = kv.put(s_key, s_value);
+				bool check = kv.get(s_key, temp);
+				bool ans = kv.put(s_key, s_value);
 
-// 				if (check == false)
-// 					db_size++;
-// 			}
-// 			else if (x == 2)
-// 			{
-// 				int temp = db_size;
-// 				if (temp == 0)
-// 					continue;
-// 				int rem = rand() % temp;
-// 				Slice s_key, s_value;
-// 				bool check = kv.get(rem, s_key, s_value);
-// 				check = kv.del(s_key);
-// 				db_size--;
-// 			}
-// 			else if (x == 3)
-// 			{
-// 				int temp = db_size;
-// 				if (temp == 0)
-// 					continue;
-// 				int rem = rand() % temp;
-// 				Slice s_key, s_value;
-// 				bool check = kv.get(rem, s_key, s_value);
-// 			}
-// 			else if (x == 4)
-// 			{
-// 				int temp = db_size;
-// 				if (temp == 0)
-// 					continue;
-// 				int rem = rand() % temp;
-// 				bool check = kv.del(rem);
-// 				db_size--;
-// 			}
-// 		}
-// 		tt = clock();
-// 	}
-// 	cout << transactions / time << endl;
-// 	return NULL;
-// }
+				if (check == false)
+					db_size++;
+			}
+			else if (x == 2)
+			{
+				int temp = db_size;
+				if (temp == 0)
+					continue;
+				int rem = rand() % temp;
+				Slice s_key, s_value;
+				bool check = kv.get(rem, s_key, s_value);
+				check = kv.del(s_key);
+				db_size--;
+			}
+			else if (x == 3)
+			{
+				int temp = db_size;
+				if (temp == 0)
+					continue;
+				int rem = rand() % temp;
+				Slice s_key, s_value;
+				bool check = kv.get(rem, s_key, s_value);
+			}
+			else if (x == 4)
+			{
+				int temp = db_size;
+				if (temp == 0)
+					continue;
+				int rem = rand() % temp;
+				bool check = kv.del(rem);
+				db_size--;
+			}
+		}
+		tt = clock();
+	}
+	cout << transactions / time << endl;
+	return NULL;
+}
 
 int main()
 {
@@ -147,17 +145,20 @@ int main()
 	cout << "Time taken by put: " << TT << "\n";
 
 	bool incorrect = false;
-	TT = 0;
+	// TT = 0;
 	for (int i = 0; i < 10000; i++)
 	{
-		int x = 3;
+		int x = 4;
 		x = rand() % 5;
 		if (x == 0)
 		{
 			string key = random_key(rand() % 64 + 1);
 			Slice s_key, s_value;
 			strToSlice(key, s_key);
+			// clock_gettime(CLOCK_MONOTONIC, &start);
 			bool ans = kv.get(s_key, s_value);
+			// clock_gettime(CLOCK_MONOTONIC, &end);
+			// TT += (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) * 1e-9;
 			map<string, string>::iterator itr = db.find(key);
 			if ((ans == false && itr != db.end()) || (ans == true && itr->second != sliceToStr(s_value)))
 				incorrect = true;
@@ -172,10 +173,15 @@ int main()
 			Slice s_key, s_value;
 			strToSlice(key, s_key);
 			strToSlice(value, s_value);
+			// clock_gettime(CLOCK_MONOTONIC, &start);
 			bool ans = kv.put(s_key, s_value);
-
+			// clock_gettime(CLOCK_MONOTONIC, &end);
+			// TT += (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) * 1e-9;
 			Slice check;
+			// clock_gettime(CLOCK_MONOTONIC, &start);
 			bool check2 = kv.get(s_key, check);
+			// clock_gettime(CLOCK_MONOTONIC, &end);
+			// TT += (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) * 1e-9;
 			db_size = db.size();
 			if (check2 == false || value != sliceToStr(check))
 				incorrect = true;
@@ -188,10 +194,10 @@ int main()
 			string key = itr->first;
 			Slice s_key, s_value;
 			strToSlice(key, s_key);
-			clock_gettime(CLOCK_MONOTONIC, &start);
+			// clock_gettime(CLOCK_MONOTONIC, &start);
 			bool check = kv.del(s_key);
-			clock_gettime(CLOCK_MONOTONIC, &end);
-			TT += (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) * 1e-9;
+			// clock_gettime(CLOCK_MONOTONIC, &end);
+			// TT += (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) * 1e-9;
 			db.erase(itr);
 			db_size--;
 
@@ -203,7 +209,10 @@ int main()
 		{
 			int rem = rand() % db_size;
 			Slice s_key, s_value;
+			// clock_gettime(CLOCK_MONOTONIC, &start);
 			bool check = kv.get(rem, s_key, s_value);
+			// clock_gettime(CLOCK_MONOTONIC, &end);
+			// TT += (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) * 1e-9;
 			map<string, string>::iterator itr = db.begin();
 			for (int i = 0; i < rem; i++)
 				itr++;
@@ -217,7 +226,10 @@ int main()
 			for (int i = 0; i < rem; i++)
 				itr++;
 			string key = itr->first;
+			// clock_gettime(CLOCK_MONOTONIC, &start);
 			bool check = kv.del(rem);
+			// clock_gettime(CLOCK_MONOTONIC, &end);
+			// TT += (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) * 1e-9;
 			db.erase(itr);
 			db_size--;
 			Slice s_key, s_value;
@@ -234,18 +246,18 @@ int main()
 	}
 	else
 	{
-		cout << "Time taken for del: " << TT << "\n";
+		// cout << "Time taken: " << TT << "\n";
 		cout << 1 << endl;
 	}
-	// int threads = 4;
+	int threads = 4;
 
-	// pthread_t tid[threads];
-	// for (int i = 0; i < threads; i++)
-	// {
-	// 	tid[i] = i;
-	//     pthread_create(&tid[i], NULL, myThreadFun, (void *)&tid[i]);
-	// }
-	// for(int i=0;i<threads;i++)
-	// 	pthread_join(tid[i],NULL);
+	pthread_t tid[threads];
+	for (int i = 0; i < threads; i++)
+	{
+		tid[i] = i;
+		pthread_create(&tid[i], NULL, myThreadFun, (void *)&tid[i]);
+	}
+	for (int i = 0; i < threads; i++)
+		pthread_join(tid[i], NULL);
 	return 0;
 }
