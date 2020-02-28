@@ -150,7 +150,7 @@ int main()
 	TT = 0;
 	for (int i = 0; i < 10000; i++)
 	{
-		int x = 0;
+		int x = 3;
 		x = rand() % 5;
 		if (x == 0)
 		{

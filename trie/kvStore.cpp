@@ -82,39 +82,6 @@ public:
 
 	Node *getRoot() { return root; }
 
-	// Node *search(Node *temp, Slice &key)
-	// {
-	// 	if (!temp)
-	// 		return temp;
-	// 	int ret = strncmp(key.data, temp->key.data, min(key.size, temp->key.size));
-	// 	if (ret < 0 || (!ret && key.size < temp->key.size))
-	// 	{
-	// 		if (temp->left == NULL)
-	// 		{
-	// 			return temp;
-	// 		}
-	// 		else
-	// 		{
-	// 			return search(temp->left, key);
-	// 		}
-	// 	}
-	// 	else if (!ret && key.size == temp->key.size)
-	// 	{
-	// 		return temp;
-	// 	}
-	// 	else
-	// 	{
-	// 		if (temp->right == NULL)
-	// 		{
-	// 			return temp;
-	// 		}
-	// 		else
-	// 		{
-	// 			return search(temp->right, key);
-	// 		}
-	// 	}
-	// }
-
 	Node *search(Slice &key)
 	{
 		Node *temp = root;
@@ -155,6 +122,14 @@ public:
 		if (x == NULL)
 			return;
 		x->child = getChild(x->left) + getChild(x->right) + 1;
+	}
+
+	void updateChild(Node *x)
+	{
+		if (x == NULL)
+			return;
+		setChild(x);
+		updateChild(x->parent);
 	}
 
 	void leftRotate(Node *x)
@@ -241,14 +216,6 @@ public:
 				}
 			}
 		}
-	}
-
-	void updateChild(Node *x)
-	{
-		if (x == NULL)
-			return;
-		setChild(x);
-		updateChild(x->parent);
 	}
 
 	bool put(Slice &key, Slice &value)
