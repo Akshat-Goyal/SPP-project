@@ -129,7 +129,7 @@ int main()
 {
 	struct timespec start, end;
 	double TT = 0;
-	for (int i = 0; i < 10000000; i++)
+	for (int i = 0; i < 100000; i++)
 	{
 		string key = random_key(rand() % 64 + 1);
 		string value = random_value(rand() % 255 + 1);
@@ -146,93 +146,97 @@ int main()
 
 	cout << "Time taken by put: " << TT << "\n";
 
-	// bool incorrect = false;
+	bool incorrect = false;
+	TT = 0;
+	for (int i = 0; i < 10000; i++)
+	{
+		int x = 0;
+		x = rand() % 5;
+		if (x == 0)
+		{
+			string key = random_key(rand() % 64 + 1);
+			Slice s_key, s_value;
+			strToSlice(key, s_key);
+			bool ans = kv.get(s_key, s_value);
+			map<string, string>::iterator itr = db.find(key);
+			if ((ans == false && itr != db.end()) || (ans == true && itr->second != sliceToStr(s_value)))
+				incorrect = true;
+		}
+		else if (x == 1)
+		{
+			int k = rand() % 64 + 1;
+			int v = rand() % 255 + 1;
+			string key = random_key(k);
+			string value = random_value(v);
+			db[key] = value;
+			Slice s_key, s_value;
+			strToSlice(key, s_key);
+			strToSlice(value, s_value);
+			bool ans = kv.put(s_key, s_value);
 
-	// for (int i = 0; i < 10000; i++)
-	// {
-	// int x = 0;
-	// // x = rand() % 5;
-	// if (x == 0)
-	// {
-	// 	string key = random_key(rand() % 64 + 1);
-	// 	Slice s_key, s_value;
-	// 	strToSlice(key, s_key);
-	// 	bool ans = kv.get(s_key, s_value);
-	// 	map<string, string>::iterator itr = db.find(key);
-	// 	if ((ans == false && itr != db.end()) || (ans == true && itr->second != sliceToStr(s_value)))
-	// 		incorrect = true;
-	// }
-	// else if (x == 1)
-	// {
-	// 	int k = rand() % 64 + 1;
-	// 	int v = rand() % 255 + 1;
-	// 	string key = random_key(k);
-	// 	string value = random_value(v);
-	// 	db[key] = value;
-	// 	Slice s_key, s_value;
-	// 	strToSlice(key, s_key);
-	// 	strToSlice(value, s_value);
-	// 	bool ans = kv.put(s_key, s_value);
+			Slice check;
+			bool check2 = kv.get(s_key, check);
+			db_size = db.size();
+			if (check2 == false || value != sliceToStr(check))
+				incorrect = true;
+		}
+		else if (x == 2)
+		{
+			int rem = rand() % db_size;
+			map<string, string>::iterator itr = db.begin();
+			advance(itr, rem);
+			string key = itr->first;
+			Slice s_key, s_value;
+			strToSlice(key, s_key);
+			clock_gettime(CLOCK_MONOTONIC, &start);
+			bool check = kv.del(s_key);
+			clock_gettime(CLOCK_MONOTONIC, &end);
+			TT += (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) * 1e-9;
+			db.erase(itr);
+			db_size--;
 
-	// 	Slice check;
-	// 	bool check2 = kv.get(s_key, check);
-	// 	db_size = db.size();
-	// 	if (check2 == false || value != sliceToStr(check))
-	// 		incorrect = true;
-	// }
-	// else if (x == 2)
-	// {
-	// 	int rem = rand() % db_size;
-	// 	map<string, string>::iterator itr = db.begin();
-	// 	advance(itr, rem);
-	// 	string key = itr->first;
-	// 	Slice s_key, s_value;
-	// 	strToSlice(key, s_key);
-	// 	bool check = kv.del(s_key);
-	// 	db.erase(itr);
-	// 	db_size--;
-
-	// 	bool check2 = kv.get(s_key, s_value);
-	// 	if (check2 == true)
-	// 		incorrect = true;
-	// }
-	// else if (x == 3)
-	// {
-	// 	int rem = rand() % db_size;
-	// 	Slice s_key, s_value;
-	// 	bool check = kv.get(rem, s_key, s_value);
-	// 	map<string, string>::iterator itr = db.begin();
-	// 	for (int i = 0; i < rem; i++)
-	// 		itr++;
-	// 	if (itr->first != sliceToStr(s_key) || itr->second != sliceToStr(s_value))
-	// 		incorrect = true;
-	// }
-	// else if (x == 4)
-	// {
-	// 	int rem = rand() % db_size;
-	// 	map<string, string>::iterator itr = db.begin();
-	// 	for (int i = 0; i < rem; i++)
-	// 		itr++;
-	// 	string key = itr->first;
-	// 	bool check = kv.del(rem);
-	// 	db.erase(itr);
-	// 	db_size--;
-	// 	Slice s_key, s_value;
-	// 	strToSlice(key, s_key);
-	// 	bool check2 = kv.get(s_key, s_value);
-	// 	if (check2 == true)
-	// 		incorrect = true;
-	// }
-	// }
-	// if (incorrect == true)
-	// {
-	// 	cout << 0 << endl;
-	// 	return 0;
-	// }
-	// else
-	// {
-	// 	cout << 1 << endl;
-	// }
+			bool check2 = kv.get(s_key, s_value);
+			if (check2 == true)
+				incorrect = true;
+		}
+		else if (x == 3)
+		{
+			int rem = rand() % db_size;
+			Slice s_key, s_value;
+			bool check = kv.get(rem, s_key, s_value);
+			map<string, string>::iterator itr = db.begin();
+			for (int i = 0; i < rem; i++)
+				itr++;
+			if (itr->first != sliceToStr(s_key) || itr->second != sliceToStr(s_value))
+				incorrect = true;
+		}
+		else if (x == 4)
+		{
+			int rem = rand() % db_size;
+			map<string, string>::iterator itr = db.begin();
+			for (int i = 0; i < rem; i++)
+				itr++;
+			string key = itr->first;
+			bool check = kv.del(rem);
+			db.erase(itr);
+			db_size--;
+			Slice s_key, s_value;
+			strToSlice(key, s_key);
+			bool check2 = kv.get(s_key, s_value);
+			if (check2 == true)
+				incorrect = true;
+		}
+	}
+	if (incorrect == true)
+	{
+		cout << 0 << endl;
+		return 0;
+	}
+	else
+	{
+		cout << "Time taken for del: " << TT << "\n";
+		cout << 1 << endl;
+	}
 	// int threads = 4;
 
 	// pthread_t tid[threads];

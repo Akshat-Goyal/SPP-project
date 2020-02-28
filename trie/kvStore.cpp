@@ -19,11 +19,13 @@ class Node
 public:
 	Slice key, value;
 	COLOR color;
+	int child;
 	Node *left, *right, *parent;
 
 	Node(Slice &key, Slice &value) : key(key), value(value)
 	{
 		parent = left = right = NULL;
+		child = 0;
 		color = RED;
 	}
 
@@ -80,32 +82,49 @@ public:
 
 	Node *getRoot() { return root; }
 
-	Node *search(Slice &key)
+	Node *search(Node *temp, Slice &key, int &flag)
 	{
-		Node *temp = root;
-		while (temp != NULL)
+		if (!temp)
+			return temp;
+		int ret = strncmp(key.data, temp->key.data, min(key.size, temp->key.size));
+		if (ret < 0 || (!ret && key.size < temp->key.size))
 		{
-			int ret = strncmp(key.data, temp->key.data, min(key.size, temp->key.size));
-			if (ret < 0 || (!ret && key.size < temp->key.size))
+			if (temp->left == NULL)
 			{
-				if (temp->left == NULL)
-					break;
-				else
-					temp = temp->left;
-			}
-			else if (!ret && key.size == temp->key.size)
-			{
-				break;
+				temp->child += flag;
+				return temp;
 			}
 			else
 			{
-				if (temp->right == NULL)
-					break;
-				else
-					temp = temp->right;
+				Node *ret = search(temp->left, key, flag);
+				temp->child += flag;
+				return ret;
 			}
 		}
-		return temp;
+		else if (!ret && key.size == temp->key.size)
+		{
+			flag = 0;
+			return temp;
+		}
+		else
+		{
+			if (temp->right == NULL)
+			{
+				return temp;
+			}
+			else
+			{
+				Node *ret = search(temp->right, key, flag);
+				return ret;
+			}
+		}
+	}
+
+	inline int getChild(Node *x)
+	{
+		if (x == NULL)
+			return 0;
+		return x->child + 1;
 	}
 
 	void leftRotate(Node *x)
@@ -113,9 +132,9 @@ public:
 		Node *nParent = x->right;
 		if (x == root)
 			root = nParent;
-
 		x->moveDown(nParent);
 		x->right = nParent->left;
+		nParent->child += getChild(x);
 		if (nParent->left != NULL)
 			nParent->left->parent = x;
 		nParent->left = x;
@@ -128,6 +147,7 @@ public:
 			root = nParent;
 		x->moveDown(nParent);
 		x->left = nParent->right;
+		x->child = getChild(x->left);
 		if (nParent->right != NULL)
 			nParent->right->parent = x;
 		nParent->right = x;
@@ -201,7 +221,8 @@ public:
 		}
 		else
 		{
-			Node *temp = search(key);
+			int flag = 1;
+			Node *temp = search(root, key, flag);
 			int ret = strncmp(key.data, temp->key.data, min(key.size, temp->key.size));
 			if (!ret && key.size == temp->key.size)
 			{
@@ -225,7 +246,8 @@ public:
 	{
 		if (root == NULL)
 			return false;
-		Node *temp = search(key);
+		int flag = 0;
+		Node *temp = search(root, key, flag);
 		int ret = strncmp(key.data, temp->key.data, min(key.size, temp->key.size));
 		if (!ret && key.size == temp->key.size)
 		{
@@ -236,178 +258,234 @@ public:
 		return false;
 	}
 
-	// void swapValues(Node *u, Node *v)
-	// {
-	// 	int temp;
-	// 	temp = u->key;
-	// 	u->key = v->key;
-	// 	v->key = temp;
-	// }
+	Node *successor(Node *x)
+	{
+		Node *temp = x;
+		while (temp->left != NULL)
+			temp = temp->left;
+		return temp;
+	}
 
-	// Node *successor(Node *x)
-	// {
-	// 	Node *temp = x;
+	Node *BSTreplace(Node *x)
+	{
+		if (x->left != NULL and x->right != NULL)
+			return successor(x->right);
+		if (x->left == NULL and x->right == NULL)
+			return NULL;
+		if (x->left != NULL)
+			return x->left;
+		else
+			return x->right;
+	}
 
-	// 	while (temp->left != NULL)
-	// 		temp = temp->left;
+	void swapValues(Node *u, Node *v)
+	{
+		Slice temp;
+		temp = u->key;
+		u->key = v->key;
+		v->key = temp;
+		temp = u->value;
+		u->value = v->value;
+		v->value = temp;
+	}
 
-	// 	return temp;
-	// }
+	void fixDoubleBlack(Node *x)
+	{
+		if (x == root)
+			return;
+		Node *sibling = x->sibling(), *parent = x->parent;
+		if (sibling == NULL)
+		{
+			fixDoubleBlack(parent);
+		}
+		else
+		{
+			if (sibling->color == RED)
+			{
+				parent->color = RED;
+				sibling->color = BLACK;
+				if (sibling->isOnLeft())
+				{
+					rightRotate(parent);
+				}
+				else
+				{
+					leftRotate(parent);
+				}
+				fixDoubleBlack(x);
+			}
+			else
+			{
+				if (sibling->hasRedChild())
+				{
+					if (sibling->left != NULL and sibling->left->color == RED)
+					{
+						if (sibling->isOnLeft())
+						{
+							sibling->left->color = sibling->color;
+							sibling->color = parent->color;
+							rightRotate(parent);
+						}
+						else
+						{
+							sibling->left->color = parent->color;
+							rightRotate(sibling);
+							leftRotate(parent);
+						}
+					}
+					else
+					{
+						if (sibling->isOnLeft())
+						{
+							sibling->right->color = parent->color;
+							leftRotate(sibling);
+							rightRotate(parent);
+						}
+						else
+						{
+							sibling->right->color = sibling->color;
+							sibling->color = parent->color;
+							leftRotate(parent);
+						}
+					}
+					parent->color = BLACK;
+				}
+				else
+				{
+					sibling->color = RED;
+					if (parent->color == BLACK)
+						fixDoubleBlack(parent);
+					else
+						parent->color = BLACK;
+				}
+			}
+		}
+	}
 
-	// Node *BSTreplace(Node *x)
-	// {
-	// 	if (x->left != NULL and x->right != NULL)
-	// 		return successor(x->right);
-	// 	if (x->left == NULL and x->right == NULL)
-	// 		return NULL;
-	// 	if (x->left != NULL)
-	// 		return x->left;
-	// 	else
-	// 		return x->right;
-	// }
+	void deleteNode(Node *v)
+	{
+		Node *u = BSTreplace(v);
+		bool uvBlack = ((u == NULL or u->color == BLACK) and (v->color == BLACK));
+		Node *parent = v->parent;
+		if (u == NULL)
+		{
+			if (v == root)
+			{
+				root = NULL;
+			}
+			else
+			{
+				if (uvBlack)
+				{
+					fixDoubleBlack(v);
+				}
+				else
+				{
+					if (v->sibling() != NULL)
+						v->sibling()->color = RED;
+				}
+				if (v->isOnLeft())
+				{
+					parent->left = NULL;
+				}
+				else
+				{
+					parent->right = NULL;
+				}
+			}
+			int flag = -1;
+			search(root, v->key, flag);
+			free(v->key.data);
+			free(v->value.data);
+			delete v;
+			return;
+		}
 
-	// void deleteNode(Node *v)
-	// {
-	// 	Node *u = BSTreplace(v);
-	// 	bool uvBlack = ((u == NULL or u->color == BLACK) and (v->color == BLACK));
-	// 	Node *parent = v->parent;
-	// 	if (u == NULL)
-	// 	{
-	// 		if (v == root)
-	// 		{
-	// 			root = NULL;
-	// 		}
-	// 		else
-	// 		{
-	// 			if (uvBlack)
-	// 			{
-	// 				fixDoubleBlack(v);
-	// 			}
-	// 			else
-	// 			{
-	// 				if (v->sibling() != NULL)
-	// 					v->sibling()->color = RED;
-	// 			}
-	// 			if (v->isOnLeft())
-	// 			{
-	// 				parent->left = NULL;
-	// 			}
-	// 			else
-	// 			{
-	// 				parent->right = NULL;
-	// 			}
-	// 		}
-	// 		delete v;
-	// 		return;
-	// 	}
+		if (v->left == NULL || v->right == NULL)
+		{
+			if (v == root)
+			{
+				free(v->key.data);
+				free(v->value.data);
+				delete v;
+				root = u;
+				u->parent = NULL;
+			}
+			else
+			{
+				if (v->isOnLeft())
+				{
+					parent->left = u;
+				}
+				else
+				{
+					parent->right = u;
+				}
+				int flag = -1;
+				search(root, v->key, flag);
+				free(v->key.data);
+				free(v->value.data);
+				delete v;
+				u->parent = parent;
+				if (uvBlack)
+				{
+					fixDoubleBlack(u);
+				}
+				else
+				{
+					u->color = BLACK;
+				}
+			}
+			return;
+		}
+		swapValues(u, v);
+		deleteNode(u);
+	}
 
-	// 	if (v->left == NULL or v->right == NULL)
-	// 	{
-	// 		if (v == root)
-	// 		{
-	// 			v->key = u->key;
-	// 			v->left = v->right = NULL;
-	// 			delete u;
-	// 		}
-	// 		else
-	// 		{
-	// 			if (v->isOnLeft())
-	// 			{
-	// 				parent->left = u;
-	// 			}
-	// 			else
-	// 			{
-	// 				parent->right = u;
-	// 			}
-	// 			delete v;
-	// 			u->parent = parent;
-	// 			if (uvBlack)
-	// 			{
-	// 				fixDoubleBlack(u);
-	// 			}
-	// 			else
-	// 			{
-	// 				u->color = BLACK;
-	// 			}
-	// 		}
-	// 		return;
-	// 	}
-	// 	swapValues(u, v);
-	// 	deleteNode(u);
-	// }
+	bool del(Slice &key)
+	{
+		if (root == NULL)
+			return false;
+		int flag = 0;
+		Node *temp = search(root, key, flag);
+		int ret = strncmp(key.data, temp->key.data, min(key.size, temp->key.size));
+		if (!ret && key.size == temp->key.size)
+		{
+			deleteNode(temp);
+			return true;
+		}
+		return false;
+	}
 
-	// void fixDoubleBlack(Node *x)
-	// {
-	// 	if (x == root)
-	// 		return;
-	// 	Node *sibling = x->sibling(), *parent = x->parent;
-	// 	if (sibling == NULL)
-	// 	{
-	// 		fixDoubleBlack(parent);
-	// 	}
-	// 	else
-	// 	{
-	// 		if (sibling->color == RED)
-	// 		{
-	// 			parent->color = RED;
-	// 			sibling->color = BLACK;
-	// 			if (sibling->isOnLeft())
-	// 			{
-	// 				rightRotate(parent);
-	// 			}
-	// 			else
-	// 			{
-	// 				leftRotate(parent);
-	// 			}
-	// 			fixDoubleBlack(x);
-	// 		}
-	// 		else
-	// 		{
-	// 			if (sibling->hasRedChild())
-	// 			{
-	// 				if (sibling->left != NULL and sibling->left->color == RED)
-	// 				{
-	// 					if (sibling->isOnLeft())
-	// 					{
-	// 						sibling->left->color = sibling->color;
-	// 						sibling->color = parent->color;
-	// 						rightRotate(parent);
-	// 					}
-	// 					else
-	// 					{
-	// 						sibling->left->color = parent->color;
-	// 						rightRotate(sibling);
-	// 						leftRotate(parent);
-	// 					}
-	// 				}
-	// 				else
-	// 				{
-	// 					if (sibling->isOnLeft())
-	// 					{
-	// 						sibling->right->color = parent->color;
-	// 						leftRotate(sibling);
-	// 						rightRotate(parent);
-	// 					}
-	// 					else
-	// 					{
-	// 						sibling->right->color = sibling->color;
-	// 						sibling->color = parent->color;
-	// 						leftRotate(parent);
-	// 					}
-	// 				}
-	// 				parent->color = BLACK;
-	// 			}
-	// 			else
-	// 			{
-	// 				sibling->color = RED;
-	// 				if (parent->color == BLACK)
-	// 					fixDoubleBlack(parent);
-	// 				else
-	// 					parent->color = BLACK;
-	// 			}
-	// 		}
-	// 	}
-	// }
+	Node *search(Node *temp, int N)
+	{
+		if (!temp)
+			return temp;
+		if (N == temp->child + 1)
+			return temp;
+		if (N < temp->child)
+			return search(temp->left, N);
+		return search(temp->right, N - temp->child - 1);
+	}
+
+	bool get(int N, Slice &key, Slice &value)
+	{
+		Node *temp = search(root, N);
+		if (temp == NULL)
+			return false;
+		key = temp->key;
+		value = temp->value;
+		return true;
+	}
+
+	bool del(int N)
+	{
+		Node *temp = search(root, N);
+		if (temp == NULL)
+			return false;
+		deleteNode(temp);
+		return true;
+	}
 
 	// void levelOrder(Node *x)
 	// {
@@ -435,22 +513,6 @@ public:
 	// 	inorder(x->left);
 	// 	cout << x->key << " ";
 	// 	inorder(x->right);
-	// }
-
-	// void deleteByVal(int n)
-	// {
-	// 	if (root == NULL)
-	// 		return;
-
-	// 	Node *v = search(n), *u;
-
-	// 	if (v->key != n)
-	// 	{
-	// 		cout << "No node found to delete with value:" << n << endl;
-	// 		return;
-	// 	}
-
-	// 	deleteNode(v);
 	// }
 
 	// void printInOrder()
