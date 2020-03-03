@@ -33,7 +33,7 @@ char *random_value(int stringLength)
     return value;
 }
 long CLOCKS_PER_SECOND = 1000000;
-kvstore kv;
+kvStore kv;
 map<char *, char *> db;
 int db_size = 0;
 int num = 0;
@@ -100,19 +100,19 @@ Slice ms(char *s)
     Slice k;
     k.size = strlen(s);
     k.data = s;
-    // k.data = (char *)malloc((k.size + 1) * 8);
+    // k.data = (char *)malloc((k.size + 1) * sizeof(char));
     // strcpy(k.data, s);
     return k;
 }
 
-map<string, char *> mp;
+// map<string, char *> mp;
 
 int main()
 {
-    for (int i = 0; i < 1000; i++)
+    for (int i = 0; i < 100000; i++)
     {
-        int k = rand() % 10 + 1;
-        int v = rand() % 256 + 1;
+        int k = rand() % 63 + 1;
+        int v = rand() % 254 + 1;
         // cout << k << " " << v << "\n";
         char *key = random_key(k);
         char *value = random_value(v);
@@ -121,19 +121,19 @@ int main()
         // cout << key << " " << strlen(key) << "\n";
         // cout << value << " " << strlen(value) << "\n";
         // cout << key << "\n";
-        int fl = 1;
-        for (auto it : db)
-        {
-            if (strcmp(it.first, key) == 0)
-            {
-                fl = 0;
-                break;
-            }
-        }
-        if (!fl)
-            continue;
-        db.insert(make_pair(key, value));
-        mp.insert(make_pair(cs(key), key));
+        // int fl = 1;
+        // for (auto it : db)
+        // {
+        //     if (strcmp(it.first, key) == 0)
+        //     {
+        //         fl = 0;
+        //         break;
+        //     }
+        // }
+        // if (!fl)
+        //     continue;
+        // db.insert(make_pair(key, value));
+        // mp.insert(make_pair(cs(key), key));
         Slice kk = ms(key);
         Slice vv = ms(value);
         if (!kv.put(kk, vv))
@@ -141,14 +141,14 @@ int main()
             cout << "Error in Put\n";
             return 0;
         }
-        db_size++;
+        // db_size++;
     }
-    int incorrect = 0;
-    cout << db_size << "\n";
-    int cnt = 1;
-    Slice key, value;
-    cout << kv.del(db_size) << "\n";
-    cout << kv.get(db_size, key, value) << "\n";
+    // int incorrect = 0;
+    // cout << db_size << "\n";
+    // int cnt = 1;
+    // Slice key, value;
+    // cout << kv.del(db_size) << "\n";
+    // cout << kv.get(db_size, key, value) << "\n";
 
     // for (auto it : mp)
     // {
@@ -172,7 +172,7 @@ int main()
     //     cnt++;
     // }
     // cout << cnt << "\n";
-    cout << "Correct\n";
+    // cout << "Correct\n";
     // for (int i = 0; i < 10; i++) {
     //     // int x = rand() % 5;
     //     // if (x == 0) {

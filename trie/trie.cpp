@@ -15,7 +15,7 @@ private:
 	{
 		int cnt[52] = {0};
 		node *ptr[52] = {NULL};
-		Z char *val = NULL;
+		char *val = NULL;
 	};
 	node *root = (node *)malloc(sizeof(node));
 
@@ -53,7 +53,7 @@ public:
 			int ret = 0;
 			if (!cur->val)
 				ret = 1;
-			cur->val = (char *)realloc(cur->val, (value.size + 1) * 8);
+			cur->val = (char *)realloc(cur->val, (value.size + 1) * sizeof(char));
 			if (!cur->val)
 				return -1;
 			strcpy(cur->val, value.data);
@@ -175,12 +175,12 @@ public:
 
 	bool get(int N, Slice &key, Slice &value)
 	{
-		char *s = (char *)malloc(65 * 8);
+		char *s = (char *)malloc(65 * sizeof(char));
 		int len = 0;
 		if (!get(root, s, len, N, value))
 			return 0;
 		key.size = len;
-		key.data = (char *)malloc((len + 1) * 8);
+		key.data = (char *)malloc((len + 1) * sizeof(char));
 		for (int i = 0; i < len; i++)
 			key.data[i] = s[i];
 		key.data[len] = '\0';
