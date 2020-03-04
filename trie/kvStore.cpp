@@ -187,13 +187,10 @@ public:
 
 	void updateChild(register Node *x)
 	{
-		// while(x){
-		// 	setChild(x);
-		// 	x = x->parent;
-		// }
-		if(x == NULL) return;
-		setChild(x);
-		updateChild(x->parent);
+		while(x){
+			setChild(x);
+			x = x->parent;
+		}
 	}
 
 	void leftRotate(Node *x)
