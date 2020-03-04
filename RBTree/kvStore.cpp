@@ -283,7 +283,8 @@ public:
 
 	bool put(Slice &key, Slice &value)
 	{
-		beginread();
+		// beginread();
+		pthread_mutex_lock(&condlock);
 		if (root == NULL)
 		{
 			Node *newNode = new Node(key, value);
@@ -296,9 +297,11 @@ public:
 			int ret = strncmp(key.data, temp->key.data, min(key.size, temp->key.size));
 			if (!ret && key.size == temp->key.size)
 			{
+				// free(temp->value.data);
 				temp->value.size = value.size;
 				temp->value.data = value.data;
-				endread();
+				// endread();
+				pthread_mutex_unlock(&condlock);
 				return true;
 			}
 			Node *newNode = new Node(key, value);
@@ -310,16 +313,19 @@ public:
 			updateChild(newNode);
 			fixRedRed(newNode);
 		}
-		endread();
+		// endread();
+		pthread_mutex_unlock(&condlock);
 		return true;
 	}
 
 	bool get(Slice &key, Slice &value)
 	{
-		beginread();
+		// beginread();
+		pthread_mutex_lock(&condlock);
 		if (root == NULL)
 		{
-			endread();
+			// endread();
+			pthread_mutex_unlock(&condlock);
 			return false;
 		}
 		Node *temp = search(key);
@@ -328,10 +334,12 @@ public:
 		{
 			value.size = temp->value.size;
 			value.data = temp->value.data;
-			endread();
+			pthread_mutex_unlock(&condlock);
+			// endread();
 			return true;
 		}
-		endread();
+		// endread();
+		pthread_mutex_unlock(&condlock);
 		return false;
 	}
 
@@ -471,6 +479,8 @@ public:
 				}
 			}
 			updateChild(parent);
+			// free(v->key.data);
+			// free(v->value.data);
 			delete v;
 			return;
 		}
@@ -479,6 +489,8 @@ public:
 		{
 			if (v == root)
 			{
+				free(v->key.data);
+				free(v->value.data);
 				delete v;
 				u->parent = NULL;
 				root = u;
@@ -496,6 +508,8 @@ public:
 				}
 				u->parent = parent;
 				updateChild(u);
+				// free(v->key.data);
+				// free(v->value.data);
 				delete v;
 				if (uvBlack)
 				{
@@ -514,10 +528,12 @@ public:
 
 	bool del(Slice &key)
 	{
-		beginwrite();
+		// beginwrite();
+		pthread_mutex_lock(&condlock);
 		if (root == NULL)
 		{
-			endwrite();
+			// endwrite();
+			pthread_mutex_unlock(&condlock);
 			return false;
 		}
 		Node *temp = search(key);
@@ -525,10 +541,12 @@ public:
 		if (!ret && key.size == temp->key.size)
 		{
 			deleteNode(temp);
-			endwrite();
+			// endwrite();
+			pthread_mutex_unlock(&condlock);
 			return true;
 		}
-		endwrite();
+		// endwrite();
+		pthread_mutex_unlock(&condlock);
 		return false;
 	}
 
@@ -547,30 +565,36 @@ public:
 
 	bool get(int N, Slice &key, Slice &value)
 	{
-		beginread();
+		// beginread();
+		pthread_mutex_lock(&condlock);
 		Node *temp = search(root, N + 1);
 		if (temp == NULL)
 		{
-			endread();
+			// endread();
+			pthread_mutex_unlock(&condlock);
 			return false;
 		}
 		key = temp->key;
 		value = temp->value;
-		endread();
+		// endread();
+		pthread_mutex_unlock(&condlock);
 		return true;
 	}
 
 	bool del(int N)
 	{
-		beginwrite();
+		// beginwrite();
+        pthread_mutex_lock(&condlock); 
 		Node *temp = search(root, N + 1);
 		if (temp == NULL)
 		{
-			endwrite();
+			// endwrite();
+			pthread_mutex_unlock(&condlock);
 			return false;
 		}
 		deleteNode(temp);
-		endwrite();
+		// endwrite();
+		pthread_mutex_unlock(&condlock);
 		return true;
 	}
 };
