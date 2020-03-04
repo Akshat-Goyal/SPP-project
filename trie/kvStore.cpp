@@ -136,7 +136,7 @@ public:
 
 	Node *search(Slice &key)
 	{
-		Node *temp = root;
+		register Node *temp = root;
 		while (temp != NULL)
 		{
 			int ret = strncmp(key.data, temp->key.data, min(key.size, temp->key.size));
@@ -176,12 +176,12 @@ public:
 		x->child = getChild(x->left) + getChild(x->right) + 1;
 	}
 
-	void updateChild(Node *x)
+	void updateChild(register Node *x)
 	{
-		if (x == NULL)
-			return;
-		setChild(x);
-		updateChild(x->parent);
+		while(x){
+			setChild(x);
+			x = x->parent;
+		}
 	}
 
 	void leftRotate(Node *x)
