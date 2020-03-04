@@ -1,4 +1,5 @@
-#include <bits/stdc++.h>
+#include <iostream>
+#include <string.h>
 #include <stdint.h>
 using namespace std;
 
@@ -248,8 +249,9 @@ public:
 				fixRedRed(grandparent);
 			}
 			else
-			{
-				if (parent->isOnLeft())
+			{	
+				if(parent == root) return;
+				else if (parent->isOnLeft())
 				{
 					if (x->isOnLeft())
 					{
@@ -281,8 +283,8 @@ public:
 
 	bool put(Slice &key, Slice &value)
 	{
-		// beginread();
-		pthread_mutex_lock(&condlock);
+		beginread();
+		// pthread_mutex_lock(&condlock);
 		if (root == NULL)
 		{
 			Node *newNode = new Node(key, value);
@@ -298,8 +300,8 @@ public:
 				free(temp->value.data);
 				temp->value.size = value.size;
 				temp->value.data = value.data;
-				// endread();
-				pthread_mutex_unlock(&condlock);
+				endread();
+				// pthread_mutex_unlock(&condlock);
 				return true;
 			}
 			Node *newNode = new Node(key, value);
@@ -311,19 +313,19 @@ public:
 			updateChild(newNode);
 			fixRedRed(newNode);
 		}
-		// endread();
-		pthread_mutex_unlock(&condlock);
+		endread();
+		// pthread_mutex_unlock(&condlock);
 		return true;
 	}
 
 	bool get(Slice &key, Slice &value)
 	{
-		// beginread();
-		pthread_mutex_lock(&condlock);
+		beginread();
+		// pthread_mutex_lock(&condlock);
 		if (root == NULL)
 		{
-			// endread();
-			pthread_mutex_unlock(&condlock);
+			endread();
+			// pthread_mutex_unlock(&condlock);
 			return false;
 		}
 		Node *temp = search(key);
@@ -332,12 +334,12 @@ public:
 		{
 			value.size = temp->value.size;
 			value.data = temp->value.data;
-			pthread_mutex_unlock(&condlock);
-			// endread();
+			// pthread_mutex_unlock(&condlock);
+			endread();
 			return true;
 		}
-		// endread();
-		pthread_mutex_unlock(&condlock);
+		endread();
+		// pthread_mutex_unlock(&condlock);
 		return false;
 	}
 
@@ -491,8 +493,8 @@ public:
 				free(v->value.data);
 				delete v;
 				root = u;
-				updateChild(u);
 				u->parent = NULL;
+				updateChild(u);
 			}
 			else
 			{
@@ -526,12 +528,12 @@ public:
 
 	bool del(Slice &key)
 	{
-		// beginwrite();
-		pthread_mutex_lock(&condlock);
+		beginwrite();
+		// pthread_mutex_lock(&condlock);
 		if (root == NULL)
 		{
-			// endwrite();
-			pthread_mutex_unlock(&condlock);
+			endwrite();
+			// pthread_mutex_unlock(&condlock);
 			return false;
 		}
 		Node *temp = search(key);
@@ -539,12 +541,12 @@ public:
 		if (!ret && key.size == temp->key.size)
 		{
 			deleteNode(temp);
-			// endwrite();
-			pthread_mutex_unlock(&condlock);
+			endwrite();
+			// pthread_mutex_unlock(&condlock);
 			return true;
 		}
-		// endwrite();
-		pthread_mutex_unlock(&condlock);
+		endwrite();
+		// pthread_mutex_unlock(&condlock);
 		return false;
 	}
 
@@ -563,96 +565,36 @@ public:
 
 	bool get(int N, Slice &key, Slice &value)
 	{
-		// beginread();
-		pthread_mutex_lock(&condlock);
+		beginread();
+		// pthread_mutex_lock(&condlock);
 		Node *temp = search(root, N + 1);
 		if (temp == NULL)
 		{
-			// endread();
-			pthread_mutex_unlock(&condlock);
+			endread();
+			// pthread_mutex_unlock(&condlock);
 			return false;
 		}
 		key = temp->key;
 		value = temp->value;
-		// endread();
-		pthread_mutex_unlock(&condlock);
+		endread();
+		// pthread_mutex_unlock(&condlock);
 		return true;
 	}
 
 	bool del(int N)
 	{
-		// beginwrite();
-        pthread_mutex_lock(&condlock); 
+		beginwrite();
+        // pthread_mutex_lock(&condlock); 
 		Node *temp = search(root, N + 1);
 		if (temp == NULL)
 		{
-			// endwrite();
-			pthread_mutex_unlock(&condlock);
+			endwrite();
+			// pthread_mutex_unlock(&condlock);
 			return false;
 		}
 		deleteNode(temp);
-		// endwrite();
-		pthread_mutex_unlock(&condlock);
+		endwrite();
+		// pthread_mutex_unlock(&condlock);
 		return true;
-	}
-
-	string sliceToStr(Slice &a)
-	{
-		string ret = "";
-		for (int i = 0; i < a.size; i++)
-			ret += a.data[i];
-		return ret;
-	}
-
-	void levelOrder(Node *x)
-	{
-		if (x == NULL)
-			return;
-		queue<Node *> q;
-		Node *curr;
-		q.push(x);
-		while (!q.empty())
-		{
-			curr = q.front();
-			q.pop();
-			cout << sliceToStr(curr->key) << "\n"
-				 << sliceToStr(curr->value) << "\n"
-				 << curr->child << "\n";
-			if (curr->left != NULL)
-				q.push(curr->left);
-			if (curr->right != NULL)
-				q.push(curr->right);
-		}
-	}
-
-	void inorder(Node *x)
-	{
-		if (x == NULL)
-			return;
-		inorder(x->left);
-		cout << sliceToStr(x->key) << "\n"
-			 << sliceToStr(x->value) << "\n"
-			 << x->child << "\n";
-		inorder(x->right);
-	}
-
-	void printInOrder()
-	{
-		cout << "Inorder: " << endl;
-		if (root == NULL)
-			cout << "Tree is empty" << endl;
-		else
-			inorder(root);
-		cout << endl;
-	}
-
-	void printLevelOrder()
-	{
-		cout << "Level order: " << endl;
-		if (root == NULL)
-			cout << "Tree is empty" << endl;
-		else
-			levelOrder(root);
-		cout << endl;
 	}
 };
