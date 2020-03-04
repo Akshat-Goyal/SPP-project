@@ -76,63 +76,16 @@ public:
 class kvStore
 {
 	Node *root;
-	int rcnt, wcnt, waitr, waitw; 
-    pthread_cond_t canread, canwrite; 
-    pthread_mutex_t condlock;
+	pthread_mutex_t lock;
 
 public:
 	kvStore()
 	{
 		root = NULL;
-		rcnt = 0, wcnt = 0, waitr = 0, waitw = 0;   
-        pthread_cond_init(&canread, NULL); 
-        pthread_cond_init(&canwrite, NULL); 
-        pthread_mutex_init(&condlock, NULL); 
+		pthread_mutex_init(&lock, NULL);
 	}
 
-    void beginread() 
-    { 
-        pthread_mutex_lock(&condlock); 
-        if (wcnt == 1 || waitw > 0) { 
-            waitr++; 
-            pthread_cond_wait(&canread, &condlock); 
-            waitr--; 
-        } 
-        rcnt++; 
-        pthread_mutex_unlock(&condlock); 
-        pthread_cond_broadcast(&canread); 
-    } 
-  
-    void endread() 
-    { 
-        pthread_mutex_lock(&condlock); 
-        if (--rcnt == 0) 
-            pthread_cond_signal(&canwrite); 
-        pthread_mutex_unlock(&condlock); 
-    } 
-  
-    void beginwrite() 
-    { 
-        pthread_mutex_lock(&condlock); 
-        if (wcnt == 1 || rcnt > 0) { 
-            ++waitw; 
-            pthread_cond_wait(&canwrite, &condlock); 
-            --waitw; 
-        } 
-        wcnt = 1; 
-        pthread_mutex_unlock(&condlock); 
-    } 
-  
-    void endwrite() 
-    { 
-        pthread_mutex_lock(&condlock); 
-        wcnt = 0; 
-        if (waitr > 0) 
-            pthread_cond_signal(&canread); 
-        else
-            pthread_cond_signal(&canwrite); 
-        pthread_mutex_unlock(&condlock); 
-    } 
+	Node *getRoot() { return root; }
 
 	Node *search(Slice &key)
 	{
@@ -272,7 +225,7 @@ public:
 
 	bool put(Slice &key, Slice &value)
 	{
-		beginread();
+		pthread_mutex_lock(&lock);
 		if (root == NULL)
 		{
 			Node *newNode = new Node(key, value);
@@ -288,7 +241,7 @@ public:
 				free(temp->value.data);
 				temp->value.size = value.size;
 				temp->value.data = value.data;
-				endread();
+				pthread_mutex_unlock(&lock);
 				return true;
 			}
 			Node *newNode = new Node(key, value);
@@ -300,16 +253,16 @@ public:
 			updateChild(newNode);
 			fixRedRed(newNode);
 		}
-		endread();
+		pthread_mutex_unlock(&lock);
 		return true;
 	}
 
 	bool get(Slice &key, Slice &value)
 	{
-		beginread();
+		pthread_mutex_lock(&lock);
 		if (root == NULL)
 		{
-			endread();
+			pthread_mutex_unlock(&lock);
 			return false;
 		}
 		Node *temp = search(key);
@@ -318,10 +271,10 @@ public:
 		{
 			value.size = temp->value.size;
 			value.data = temp->value.data;
-			endread();
+			pthread_mutex_unlock(&lock);
 			return true;
 		}
-		endread();
+		pthread_mutex_unlock(&lock);
 		return false;
 	}
 
@@ -510,10 +463,10 @@ public:
 
 	bool del(Slice &key)
 	{
-		beginwrite();
+		pthread_mutex_lock(&lock);
 		if (root == NULL)
 		{
-			endwrite();
+			pthread_mutex_unlock(&lock);
 			return false;
 		}
 		Node *temp = search(key);
@@ -521,10 +474,10 @@ public:
 		if (!ret && key.size == temp->key.size)
 		{
 			deleteNode(temp);
-			endwrite();
+			pthread_mutex_unlock(&lock);
 			return true;
 		}
-		endwrite();
+		pthread_mutex_unlock(&lock);
 		return false;
 	}
 
@@ -543,30 +496,30 @@ public:
 
 	bool get(int N, Slice &key, Slice &value)
 	{
-		beginread();
+		pthread_mutex_lock(&lock);
 		Node *temp = search(root, N + 1);
 		if (temp == NULL)
 		{
-			endread();
+			pthread_mutex_unlock(&lock);
 			return false;
 		}
 		key = temp->key;
 		value = temp->value;
-		endread();
+		pthread_mutex_unlock(&lock);
 		return true;
 	}
 
 	bool del(int N)
 	{
-		beginwrite();
+		pthread_mutex_lock(&lock);
 		Node *temp = search(root, N + 1);
 		if (temp == NULL)
 		{
-			endwrite();
+			pthread_mutex_unlock(&lock);
 			return false;
 		}
 		deleteNode(temp);
-		endwrite();
+		pthread_mutex_unlock(&lock);
 		return true;
 	}
 
@@ -630,3 +583,81 @@ public:
 		cout << endl;
 	}
 };
+
+// string sliceToStr(Slice &a)
+// {
+// 	string ret = "";
+
+// 	for (int i = 0; i < a.size; i++)
+// 		ret += a.data[i];
+
+// 	return ret;
+// }
+
+// void strToSlice(string l, Slice &a)
+// {
+// 	a.size = l.length();
+// 	a.data = (char *)malloc(a.size);
+// 	strncpy(a.data, l.c_str(), a.size);
+// }
+
+// int main()
+// {
+// 	ios_base::sync_with_stdio(0);
+// 	cin.tie(0);
+// 	cout.tie(0);
+// 	kvStore t;
+// 	Slice key, value;
+// 	key.size = 5;
+// 	key.data = (char *)malloc(sizeof(char) * key.size);
+// 	strncpy(key.data, "hello", key.size);
+// 	value.size = 10;
+// 	value.data = (char *)malloc(sizeof(char) * value.size);
+// 	strncpy(value.data, "helloWorld", value.size);
+// 	t.put(key, value);
+// 	Slice val;
+// 	int ret = t.get(key, val);
+// 	cout << "Key\n";
+// 	cout << sliceToStr(key) << "\n";
+// 	if (!ret)
+// 	{
+// 		cout << "Key does not exist\n";
+// 	}
+// 	else
+// 	{
+// 		if (val.size != value.size || strncmp(val.data, value.data, val.size))
+// 		{
+// 			cout << "Wrong value\n";
+// 		}
+// 		else
+// 		{
+// 			cout << sliceToStr(val) << "\n";
+// 		}
+// 	}
+// 	// key.size = 4;
+// 	// key.data = (char *)malloc(sizeof(char) * key.size);
+// 	// strncpy(key.data, "hell", key.size);
+// 	// value.size = 8;
+// 	// value.data = (char *)malloc(sizeof(char) * value.size);
+// 	// strncpy(value.data, "helloWod", value.size);
+// 	// t.put(key, value);
+// 	// ret = t.get(key, val);
+// 	// cout << "Key\n";
+// 	// cout << sliceToStr(key) << "\n";
+// 	// if (!ret)
+// 	// {
+// 	// 	cout << "Key does not exist\n";
+// 	// }
+// 	// else
+// 	// {
+// 	// 	if (val.size != value.size || strncmp(val.data, value.data, val.size))
+// 	// 	{
+// 	// 		cout << "Wrong value\n";
+// 	// 	}
+// 	// 	else
+// 	// 	{
+// 	// 		cout << sliceToStr(val) << "\n";
+// 	// 	}
+// 	// }
+// 	return 0;
+// }
