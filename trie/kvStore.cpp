@@ -90,6 +90,15 @@ public:
         pthread_mutex_init(&condlock, NULL); 
 	}
 
+	kvStore(int maxN)
+	{
+		root = NULL;
+		rcnt = 0, wcnt = 0, waitr = 0, waitw = 0;   
+        pthread_cond_init(&canread, NULL); 
+        pthread_cond_init(&canwrite, NULL); 
+        pthread_mutex_init(&condlock, NULL); 
+	}
+
     void beginread() 
     { 
         pthread_mutex_lock(&condlock); 
@@ -178,10 +187,13 @@ public:
 
 	void updateChild(register Node *x)
 	{
-		while(x){
-			setChild(x);
-			x = x->parent;
-		}
+		// while(x){
+		// 	setChild(x);
+		// 	x = x->parent;
+		// }
+		if(x == NULL) return;
+		setChild(x);
+		updateChild(x->parent);
 	}
 
 	void leftRotate(Node *x)
