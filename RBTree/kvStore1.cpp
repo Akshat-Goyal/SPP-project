@@ -296,6 +296,7 @@ public:
 			int ret = strncmp(key.data, temp->key.data, min(key.size, temp->key.size));
 			if (!ret && key.size == temp->key.size)
 			{
+				free(temp->value.data);
 				temp->value.size = value.size;
 				temp->value.data = value.data;
 				endread();
@@ -471,6 +472,8 @@ public:
 				}
 			}
 			updateChild(parent);
+			free(v->key.data);
+			free(v->value.data);
 			delete v;
 			return;
 		}
@@ -479,6 +482,8 @@ public:
 		{
 			if (v == root)
 			{
+				free(v->key.data);
+				free(v->value.data);
 				delete v;
 				u->parent = NULL;
 				root = u;
@@ -496,6 +501,8 @@ public:
 				}
 				u->parent = parent;
 				updateChild(u);
+				free(v->key.data);
+				free(v->value.data);
 				delete v;
 				if (uvBlack)
 				{
