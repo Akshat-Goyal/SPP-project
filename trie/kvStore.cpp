@@ -284,7 +284,6 @@ public:
 	bool put(Slice &key, Slice &value)
 	{
 		beginread();
-		// pthread_mutex_lock(&condlock);
 		if (root == NULL)
 		{
 			Node *newNode = new Node(key, value);
@@ -301,7 +300,6 @@ public:
 				temp->value.size = value.size;
 				temp->value.data = value.data;
 				endread();
-				// pthread_mutex_unlock(&condlock);
 				return true;
 			}
 			Node *newNode = new Node(key, value);
@@ -314,18 +312,15 @@ public:
 			fixRedRed(newNode);
 		}
 		endread();
-		// pthread_mutex_unlock(&condlock);
 		return true;
 	}
 
 	bool get(Slice &key, Slice &value)
 	{
 		beginread();
-		// pthread_mutex_lock(&condlock);
 		if (root == NULL)
 		{
 			endread();
-			// pthread_mutex_unlock(&condlock);
 			return false;
 		}
 		Node *temp = search(key);
@@ -334,12 +329,10 @@ public:
 		{
 			value.size = temp->value.size;
 			value.data = temp->value.data;
-			// pthread_mutex_unlock(&condlock);
 			endread();
 			return true;
 		}
 		endread();
-		// pthread_mutex_unlock(&condlock);
 		return false;
 	}
 
@@ -529,11 +522,9 @@ public:
 	bool del(Slice &key)
 	{
 		beginwrite();
-		// pthread_mutex_lock(&condlock);
 		if (root == NULL)
 		{
 			endwrite();
-			// pthread_mutex_unlock(&condlock);
 			return false;
 		}
 		Node *temp = search(key);
@@ -542,11 +533,9 @@ public:
 		{
 			deleteNode(temp);
 			endwrite();
-			// pthread_mutex_unlock(&condlock);
 			return true;
 		}
 		endwrite();
-		// pthread_mutex_unlock(&condlock);
 		return false;
 	}
 
@@ -566,35 +555,29 @@ public:
 	bool get(int N, Slice &key, Slice &value)
 	{
 		beginread();
-		// pthread_mutex_lock(&condlock);
 		Node *temp = search(root, N + 1);
 		if (temp == NULL)
 		{
 			endread();
-			// pthread_mutex_unlock(&condlock);
 			return false;
 		}
 		key = temp->key;
 		value = temp->value;
 		endread();
-		// pthread_mutex_unlock(&condlock);
 		return true;
 	}
 
 	bool del(int N)
 	{
 		beginwrite();
-        // pthread_mutex_lock(&condlock); 
 		Node *temp = search(root, N + 1);
 		if (temp == NULL)
 		{
 			endwrite();
-			// pthread_mutex_unlock(&condlock);
 			return false;
 		}
 		deleteNode(temp);
 		endwrite();
-		// pthread_mutex_unlock(&condlock);
 		return true;
 	}
 };
