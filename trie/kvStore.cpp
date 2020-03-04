@@ -76,9 +76,14 @@ public:
 class kvStore
 {
 	Node *root;
+	pthread_mutex_t lock;
 
 public:
-	kvStore() { root = NULL; }
+	kvStore()
+	{
+		root = NULL;
+		pthread_mutex_init(&lock, NULL);
+	}
 
 	Node *getRoot() { return root; }
 
@@ -220,6 +225,7 @@ public:
 
 	bool put(Slice &key, Slice &value)
 	{
+		pthread_mutex_lock(&lock);
 		if (root == NULL)
 		{
 			Node *newNode = new Node(key, value);
@@ -235,6 +241,7 @@ public:
 				free(temp->value.data);
 				temp->value.size = value.size;
 				temp->value.data = value.data;
+				pthread_mutex_unlock(&lock);
 				return true;
 			}
 			Node *newNode = new Node(key, value);
@@ -246,21 +253,28 @@ public:
 			updateChild(newNode);
 			fixRedRed(newNode);
 		}
+		pthread_mutex_unlock(&lock);
 		return true;
 	}
 
 	bool get(Slice &key, Slice &value)
 	{
+		pthread_mutex_lock(&lock);
 		if (root == NULL)
+		{
+			pthread_mutex_unlock(&lock);
 			return false;
+		}
 		Node *temp = search(key);
 		int ret = strncmp(key.data, temp->key.data, min(key.size, temp->key.size));
 		if (!ret && key.size == temp->key.size)
 		{
 			value.size = temp->value.size;
 			value.data = temp->value.data;
+			pthread_mutex_unlock(&lock);
 			return true;
 		}
+		pthread_mutex_unlock(&lock);
 		return false;
 	}
 
@@ -414,6 +428,7 @@ public:
 				free(v->value.data);
 				delete v;
 				root = u;
+				updateChild(u);
 				u->parent = NULL;
 			}
 			else
@@ -448,15 +463,21 @@ public:
 
 	bool del(Slice &key)
 	{
+		pthread_mutex_lock(&lock);
 		if (root == NULL)
+		{
+			pthread_mutex_unlock(&lock);
 			return false;
+		}
 		Node *temp = search(key);
 		int ret = strncmp(key.data, temp->key.data, min(key.size, temp->key.size));
 		if (!ret && key.size == temp->key.size)
 		{
 			deleteNode(temp);
+			pthread_mutex_unlock(&lock);
 			return true;
 		}
+		pthread_mutex_unlock(&lock);
 		return false;
 	}
 
@@ -475,20 +496,30 @@ public:
 
 	bool get(int N, Slice &key, Slice &value)
 	{
+		pthread_mutex_lock(&lock);
 		Node *temp = search(root, N + 1);
 		if (temp == NULL)
+		{
+			pthread_mutex_unlock(&lock);
 			return false;
+		}
 		key = temp->key;
 		value = temp->value;
+		pthread_mutex_unlock(&lock);
 		return true;
 	}
 
 	bool del(int N)
 	{
+		pthread_mutex_lock(&lock);
 		Node *temp = search(root, N + 1);
 		if (temp == NULL)
+		{
+			pthread_mutex_unlock(&lock);
 			return false;
+		}
 		deleteNode(temp);
+		pthread_mutex_unlock(&lock);
 		return true;
 	}
 
